@@ -1,7 +1,9 @@
 package API_CardGameSpring.Controller
 
 import API_CardGameSpring.Models.Action
+import API_CardGameSpring.Models.Bot
 import API_CardGameSpring.Models.Card
+import API_CardGameSpring.Models.Player
 import API_CardGameSpring.Models.StartGameInput
 import API_CardGameSpring.Models.StartGameOutput
 import org.springframework.http.ResponseEntity
@@ -19,7 +21,7 @@ class CardsController {
             "2" : new Card(id: 2, name: "Gerald", attack: 15, position: "MELEE", faction: "neutral"),
             "3" : new Card(id: 3, name: "Triss", attack: 7, position: "MELEE", faction: "neutral"),
             "4" : new Card(id: 4, name: "Vernon", attack: 10, position: "MELEE", faction: "Northern Realms"),
-            "5" : new Card(id: 5, name: "imlerith", attack: 10, position: "MELEE", faction: "Monsters"),
+            "5" : new Card(id: 5, name: "Imlerith", attack: 10, position: "MELEE", faction: "Monsters"),
             "6" : new Card(id: 6, name: "Phillipa", attack: 10, position: "RANGED", faction: "Northern Realms"),
             "7" : new Card(id: 7, name: "Yennefer", attack: 7, position: "RANGED", faction: "neutral"),
             "8" : new Card(id: 8, name: "Milva", attack: 10, position: "RANGED", faction: "Scoia'tael"),
@@ -32,26 +34,50 @@ class CardsController {
             "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
 
+    private Bot bot = new Bot()
+    private Player player = new Player()
+
     @GetMapping
     ResponseEntity getCards() {
         return ResponseEntity.ok(cards.values().toList())
     }
 
     @PostMapping("/start_game")
-    ResponseEntity startGame(@RequestBody StartGameInput input){
-        // impletar: logica de sortear cara ou coroa, e atribuir o resultado para o faceOrCrownResult, logica de
-        // sortear as cartas do bot e jogador, logica de sortear a carta que bot ira jogar, caso ele tenha vencido
-        // no cara ou coroa
+    ResponseEntity startGame(@RequestBody StartGameInput input) {
+        player = input.player
+        Random random = new Random()
         Action botAction = new Action()
-        StartGameOutput output = new StartGameOutput(faceOrCrownResult: false, botAction: botAction)
+        boolean faceOrCrownResult = random.nextBoolean()
+        for (int i = 0; i < 5; i++) {
+            int id
+            id = random.nextInt(cards.size()) + 1
+            player.cards.add(cards.get(id.toString()))
+            id = random.nextInt(cards.size()) + 1
+            bot.cards.add(cards.get(id.toString()))
+        }
+        if (input.faceOrCrown != faceOrCrownResult) {
+            botAction.cardPlayed = bot.cards.get(random.nextInt(bot.cards.size()))
+        }
+
+        StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
         return ResponseEntity.ok(output)
     }
 
-//    @PostMapping("/play")
-//    ResponseEntity play(){
-//
-//    }
-//
+    @GetMapping("/player_cards")
+    ResponseEntity getPlayerCards() {
+        return ResponseEntity.ok(player.cards)
+    }
+    @GetMapping("/bot_cards")
+    ResponseEntity getBotCards() {
+        return ResponseEntity.ok(bot.cards)
+    }
+
+    //@PostMapping("/play")
+    //ResponseEntity play() {
+    //
+    //}
+
+
 //    @GetMapping("/status")
 //    ResponseEntity getStatus(){
 //
