@@ -1,7 +1,7 @@
 package API_CardGameSpring.models
 
 class StartGameOutput {
-    Action botAction
+    BotAction botAction
     Boolean faceOrCrownResult
 
 }

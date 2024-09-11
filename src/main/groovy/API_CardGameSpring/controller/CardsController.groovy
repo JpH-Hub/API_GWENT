@@ -1,6 +1,6 @@
 package API_CardGameSpring.controller
 
-import API_CardGameSpring.models.Action
+import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Bot
 import API_CardGameSpring.models.Card
 import API_CardGameSpring.models.PlayInput
@@ -49,7 +49,7 @@ class CardsController {
     ResponseEntity startGame(@RequestBody StartGameInput input) {
         rounds = 1
         player = input.player
-        Action botAction = new Action()
+        BotAction botAction = new BotAction()
         boolean faceOrCrownResult = random.nextBoolean()
         for (int i = 0; i < 5; i++) {
             int id
@@ -66,10 +66,10 @@ class CardsController {
         return ResponseEntity.ok(output)
     }
 
-    private void playBot(Action botAction) {
+    private void playBot(BotAction botAction) {
         int index = random.nextInt(bot.cards.size())
-        botAction.cardPlayed = bot.cards.get(index)
-        bot.cardsPlayed[rounds.toString()].add(botAction.cardPlayed)
+        botAction.botCardPlayed = bot.cards.get(index)
+        bot.cardsPlayed[rounds.toString()].add(botAction.botCardPlayed)
         bot.cards.remove(index)
     }
 
@@ -87,7 +87,7 @@ class CardsController {
         int index = input.cardId
         player.cardsPlayed[rounds.toString()].add(player.cards.get(index))
         player.cards.remove(index)
-        Action botAction = new Action()
+        BotAction botAction = new BotAction()
         playBot(botAction)
         return ResponseEntity.ok(botAction)
     }
