@@ -6,6 +6,15 @@ meta {
 
 post {
   url: http://localhost:8080/cards/start_game
-  body: none
+  body: json
   auth: none
+}
+
+body:json {
+  {
+    "faceOrCrown": true,
+    "player": {
+      "name": "mkn"
+    }
+  }
 }
