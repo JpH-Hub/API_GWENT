@@ -1,4 +1,4 @@
-package API_CardGameSpring.Models
+package API_CardGameSpring.models
 
 class StartGameOutput {
     Action botAction

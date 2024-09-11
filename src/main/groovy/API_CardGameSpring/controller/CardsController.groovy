@@ -1,11 +1,12 @@
-package API_CardGameSpring.Controller
+package API_CardGameSpring.controller
 
-import API_CardGameSpring.Models.Action
-import API_CardGameSpring.Models.Bot
-import API_CardGameSpring.Models.Card
-import API_CardGameSpring.Models.Player
-import API_CardGameSpring.Models.StartGameInput
-import API_CardGameSpring.Models.StartGameOutput
+import API_CardGameSpring.models.Action
+import API_CardGameSpring.models.Bot
+import API_CardGameSpring.models.Card
+import API_CardGameSpring.models.PlayInput
+import API_CardGameSpring.models.Player
+import API_CardGameSpring.models.StartGameInput
+import API_CardGameSpring.models.StartGameOutput
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -34,8 +35,10 @@ class CardsController {
             "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
 
+    private Random random = new Random()
     private Bot bot = new Bot()
     private Player player = new Player()
+    private int rounds = 0
 
     @GetMapping
     ResponseEntity getCards() {
@@ -44,8 +47,8 @@ class CardsController {
 
     @PostMapping("/start_game")
     ResponseEntity startGame(@RequestBody StartGameInput input) {
+        rounds = 1
         player = input.player
-        Random random = new Random()
         Action botAction = new Action()
         boolean faceOrCrownResult = random.nextBoolean()
         for (int i = 0; i < 5; i++) {
@@ -56,11 +59,18 @@ class CardsController {
             bot.cards.add(cards.get(id.toString()))
         }
         if (input.faceOrCrown != faceOrCrownResult) {
-            botAction.cardPlayed = bot.cards.get(random.nextInt(bot.cards.size()))
+            playBot(botAction)
         }
 
         StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
         return ResponseEntity.ok(output)
+    }
+
+    private void playBot(Action botAction) {
+        int index = random.nextInt(bot.cards.size())
+        botAction.cardPlayed = bot.cards.get(index)
+        bot.cardsPlayed[rounds.toString()].add(botAction.cardPlayed)
+        bot.cards.remove(index)
     }
 
     @GetMapping("/player_cards")
@@ -72,11 +82,15 @@ class CardsController {
         return ResponseEntity.ok(bot.cards)
     }
 
-    //@PostMapping("/play")
-    //ResponseEntity play() {
-    //
-    //}
-
+    @PostMapping("/play")
+    ResponseEntity play(@RequestBody PlayInput input) {
+        int index = input.cardId
+        player.cardsPlayed[rounds.toString()].add(player.cards.get(index))
+        player.cards.remove(index)
+        Action botAction = new Action()
+        playBot(botAction)
+        return ResponseEntity.ok(botAction)
+    }
 
 //    @GetMapping("/status")
 //    ResponseEntity getStatus(){
