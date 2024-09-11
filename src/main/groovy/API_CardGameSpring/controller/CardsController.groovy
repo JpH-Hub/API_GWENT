@@ -77,6 +77,7 @@ class CardsController {
     ResponseEntity getPlayerCards() {
         return ResponseEntity.ok(player.cards)
     }
+
     @GetMapping("/bot_cards")
     ResponseEntity getBotCards() {
         return ResponseEntity.ok(bot.cards)
@@ -91,10 +92,19 @@ class CardsController {
         playBot(botAction)
         return ResponseEntity.ok(botAction)
     }
+    //@TODO
+    // adicionar um atributo no PlayInput e fazer uma logica para que o player possa passar a vez
+    // fazer validação se a carta que o player tentou jogar é valida, se n for retornar um erro
+    // fazer uma logica para ver se o player ainda tem cartas disponiveis para jogar, se n tiver vai passar a vez automaticamente
+    // caso o player passe a vez, o bot deve jogar até encerrar o turno(até acabar as cartar dele ou até que "decida" que deve encerrar o turno)
+    // quando o turno encerrar, a rota /play deveria restornar o resultado dele turno
+    // TALVEZ deva existir uma rota start_round
+    // o contador de round tem que ser incrementado ao fim de cada round
+    // quando a partida acabar, a rota /play deve retornar o resultado da partida
 
 //    @GetMapping("/status")
-//    ResponseEntity getStatus(){
-//
+//    ResponseEntity getStatus() {
+//      @TODO deve retornar o status atual da partida, cartas disponiveis do player, round atual, placar e o que mais for improtante
 //    }
 
 }
