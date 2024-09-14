@@ -3,6 +3,7 @@ package API_CardGameSpring.controller
 import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Bot
 import API_CardGameSpring.models.Card
+import API_CardGameSpring.models.PlayGameOutput
 import API_CardGameSpring.models.PlayInput
 import API_CardGameSpring.models.Player
 import API_CardGameSpring.models.StartGameInput
@@ -48,8 +49,11 @@ class CardsController {
     @PostMapping("/start_game")
     ResponseEntity startGame(@RequestBody StartGameInput input) {
         rounds = 1
+        bot.cards = []
         player = input.player
+        bot.cardsPlayed = ["1":[], "2":[], "3": []]
         BotAction botAction = new BotAction()
+
         boolean faceOrCrownResult = random.nextBoolean()
         for (int i = 0; i < 5; i++) {
             int id
@@ -59,19 +63,21 @@ class CardsController {
             bot.cards.add(cards.get(id.toString()))
         }
         if (input.faceOrCrown != faceOrCrownResult) {
-            playBot(botAction)
+            botAction = playBot()
         }
 
         StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
         return ResponseEntity.ok(output)
     }
 
-    private void playBot(BotAction botAction) {
+    private BotAction playBot() {
         int index = random.nextInt(bot.cards.size())
-        botAction.botCardPlayed = bot.cards.get(index)
-        bot.cardsPlayed[rounds.toString()].add(botAction.botCardPlayed)
-        bot.cards.remove(index)
+        Card botCardPlayed = bot.cards.get(index)
+        bot.cards = bot.cards - botCardPlayed
+        bot.cardsPlayed[rounds.toString()] = bot.cardsPlayed[rounds.toString()] + botCardPlayed
+        return new BotAction(botCardPlayed: botCardPlayed)
     }
+
 
     @GetMapping("/player_cards")
     ResponseEntity getPlayerCards() {
@@ -85,16 +91,25 @@ class CardsController {
 
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
-        int index = input.cardId
-        player.cardsPlayed[rounds.toString()].add(player.cards.get(index))
-        player.cards.remove(index)
-        BotAction botAction = new BotAction()
-        playBot(botAction)
+        boolean turn = input.passTurn
+        boolean botTurn = false
+        if (!turn) {
+            int index = player.cards.findIndexOf {it.id == input.cardId}
+            if(index < 0){
+                return ResponseEntity.badRequest().build()
+            }
+            Card playerCardPlayed = player.cards[index]
+            player.cards = player.cards - playerCardPlayed
+            player.cardsPlayed[rounds.toString()] = player.cardsPlayed[rounds.toString()] + playerCardPlayed
+            BotAction botAction = playBot()
+            PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed, botAction: botAction)
+            return ResponseEntity.ok(playOutput)
+        }
+        BotAction botAction = playBot()
         return ResponseEntity.ok(botAction)
     }
+
     //@TODO
-    // adicionar um atributo no PlayInput e fazer uma logica para que o player possa passar a vez
-    // fazer validação se a carta que o player tentou jogar é valida, se n for retornar um erro
     // fazer uma logica para ver se o player ainda tem cartas disponiveis para jogar, se n tiver vai passar a vez automaticamente
     // caso o player passe a vez, o bot deve jogar até encerrar o turno(até acabar as cartar dele ou até que "decida" que deve encerrar o turno)
     // quando o turno encerrar, a rota /play deveria restornar o resultado dele turno
@@ -106,5 +121,4 @@ class CardsController {
 //    ResponseEntity getStatus() {
 //      @TODO deve retornar o status atual da partida, cartas disponiveis do player, round atual, placar e o que mais for improtante
 //    }
-
 }
