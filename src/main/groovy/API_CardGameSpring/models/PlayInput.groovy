@@ -1,6 +1,8 @@
 package API_CardGameSpring.models
 
 class PlayInput {
-    int cardId
+    Integer cardId
+    boolean passTurn
+
 
 }
