@@ -51,7 +51,7 @@ class CardsController {
         rounds = 1
         bot.cards = []
         player = input.player
-        bot.cardsPlayed = ["1":[], "2":[], "3": []]
+        bot.cardsPlayed = ["1": [], "2": [], "3": []]
         BotAction botAction = new BotAction()
 
         boolean faceOrCrownResult = random.nextBoolean()
@@ -64,6 +64,7 @@ class CardsController {
         }
         if (input.faceOrCrown != faceOrCrownResult) {
             botAction = playBot()
+
         }
 
         StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
@@ -73,7 +74,7 @@ class CardsController {
     private BotAction playBot() {
         int index = random.nextInt(bot.cards.size())
         Card botCardPlayed = bot.cards.get(index)
-        bot.cards = bot.cards - botCardPlayed
+        bot.cards.remove(index)
         bot.cardsPlayed[rounds.toString()] = bot.cardsPlayed[rounds.toString()] + botCardPlayed
         return new BotAction(botCardPlayed: botCardPlayed)
     }
@@ -91,31 +92,56 @@ class CardsController {
 
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
+        List<BotAction> botActions = []
         boolean turn = input.passTurn
-        boolean botTurn = false
+        boolean botTurn
+        if (player.cards.isEmpty()) {
+            turn = true
+        }
         if (!turn) {
-            int index = player.cards.findIndexOf {it.id == input.cardId}
-            if(index < 0){
+            int index = player.cards.findIndexOf { it.id == input.cardId }
+            if (index < 0) {
                 return ResponseEntity.badRequest().build()
             }
             Card playerCardPlayed = player.cards[index]
-            player.cards = player.cards - playerCardPlayed
+            player.cards.remove(index)
             player.cardsPlayed[rounds.toString()] = player.cardsPlayed[rounds.toString()] + playerCardPlayed
-            BotAction botAction = playBot()
-            PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed, botAction: botAction)
+            if (bot.cards.isEmpty()) {
+                botTurn = true
+            } else {
+                botTurn = random.nextBoolean()
+            }
+            if (botTurn) {
+                PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed, botActions: botActions)
+                return ResponseEntity.ok(playOutput)
+            } else {
+                BotAction botAction = playBot()
+                botActions.add(botAction)
+                PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed, botActions: botActions)
+                return ResponseEntity.ok(playOutput)
+            }
+        } else {
+            if (bot.cards.isEmpty()) {
+                botTurn = true
+            } else {
+                botTurn = random.nextBoolean()
+            }
+            while (!botTurn) {
+                botTurn = random.nextBoolean()
+                BotAction botAction = playBot()
+                botActions.add(botAction)
+            }
+            PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions)
             return ResponseEntity.ok(playOutput)
         }
-        BotAction botAction = playBot()
-        return ResponseEntity.ok(botAction)
     }
-
-    //@TODO
-    // fazer uma logica para ver se o player ainda tem cartas disponiveis para jogar, se n tiver vai passar a vez automaticamente
-    // caso o player passe a vez, o bot deve jogar até encerrar o turno(até acabar as cartar dele ou até que "decida" que deve encerrar o turno)
-    // quando o turno encerrar, a rota /play deveria restornar o resultado dele turno
-    // TALVEZ deva existir uma rota start_round
-    // o contador de round tem que ser incrementado ao fim de cada round
-    // quando a partida acabar, a rota /play deve retornar o resultado da partida
+    //@Todo
+    //Se o bot passar sua vez, somente o jogador pode jogar até que ele passa a vez tambem
+    //
+// quando o turno encerrar, a rota /play deveria retornar o resultado dele turno
+// TALVEZ deva existir uma rota start_round
+// o contador de round tem que ser incrementado ao fim de cada round
+// quando a partida acabar, a rota /play deve retornar o resultado da partida
 
 //    @GetMapping("/status")
 //    ResponseEntity getStatus() {
