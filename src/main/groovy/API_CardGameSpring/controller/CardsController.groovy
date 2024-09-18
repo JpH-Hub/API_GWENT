@@ -9,6 +9,7 @@ import API_CardGameSpring.models.Player
 import API_CardGameSpring.models.StartGameInput
 import API_CardGameSpring.models.StartGameOutput
 import API_CardGameSpring.models.StatusGameOutput
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -94,7 +95,7 @@ class CardsController {
         return ResponseEntity.ok(bot.cards)
     }
 
-    private ResponseEntity handlePlayerTurn(PlayInput input, List<BotAction> botActions) {
+    private PlayGameOutput handlePlayerTurn(PlayInput input, List<BotAction> botActions) {
         int index = player.cards.findIndexOf { it.id == input.cardId }
         if (index < 0) {
             return ResponseEntity.badRequest().build()
@@ -140,12 +141,12 @@ class CardsController {
         currentRound++
     }
 
-    private ResponseEntity playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
+    private PlayGameOutput playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
         PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed, botActions: botActions)
-        return ResponseEntity.ok(playOutput)
+        return playOutput
     }
 
-    private ResponseEntity handleBotTurn(List<BotAction> botActions) {
+    private PlayGameOutput handleBotTurn(List<BotAction> botActions) {
         while (!shouldBotPlay()) {
             shouldBotPlay()
             BotAction botAction = playBot()
@@ -163,12 +164,13 @@ class CardsController {
             player.life = player.life - 1
         }
         PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions)
-        return ResponseEntity.ok(playOutput)
+        return playOutput
     }
 
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
         if (bot.life <= 0) {
+            playOutPut =
             String winner = "Você ganhou"
             return ResponseEntity.ok(winner)
         } else if (player.life <= 0) {
@@ -184,9 +186,9 @@ class CardsController {
             turn = true
         }
         if (!turn) {
-            return handlePlayerTurn(input, botActions)
+            return ResponseEntity.ok(handlePlayerTurn(input, botActions))
         } else {
-            return handleBotTurn(botActions)
+            return ResponseEntity.ok(handleBotTurn(botActions))
         }
     }
 
