@@ -8,6 +8,7 @@ import API_CardGameSpring.models.PlayInput
 import API_CardGameSpring.models.Player
 import API_CardGameSpring.models.StartGameInput
 import API_CardGameSpring.models.StartGameOutput
+import API_CardGameSpring.models.StatusGameOutput
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -35,7 +36,8 @@ class CardsController {
             "14": new Card(id: 14, name: "Morvran Voorhis", attack: 10, position: "SIEGE", faction: "NilfGaard"),
             "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
-
+    private int paralized
+    private boolean turn
     private Random random = new Random()
     private Bot bot = new Bot()
     private Player player = new Player()
@@ -49,13 +51,14 @@ class CardsController {
     @PostMapping("/start_game")
     ResponseEntity startGame(@RequestBody StartGameInput input) {
         rounds = 1
+        player.attackPoints = 0
+        bot.attackPoints = 0
         player.life = 2
         bot.life = 2
         bot.cards = []
         player = input.player
         bot.cardsPlayed = ["1": [], "2": [], "3": []]
         BotAction botAction = new BotAction()
-
         boolean faceOrCrownResult = random.nextBoolean()
         for (int i = 0; i < 5; i++) {
             int id
@@ -66,7 +69,6 @@ class CardsController {
         }
         if (input.faceOrCrown != faceOrCrownResult) {
             botAction = playBot()
-
         }
         StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
         return ResponseEntity.ok(output)
@@ -77,6 +79,7 @@ class CardsController {
         Card botCardPlayed = bot.cards.get(index)
         bot.cards.remove(index)
         bot.cardsPlayed[rounds.toString()] = bot.cardsPlayed[rounds.toString()] + botCardPlayed
+        bot.attackPoints =+ botCardPlayed.attack
         return new BotAction(botCardPlayed: botCardPlayed)
     }
 
@@ -96,12 +99,30 @@ class CardsController {
         if (index < 0) {
             return ResponseEntity.badRequest().build()
         }
-
         Card playerCardPlayed = player.cards[index]
         player.cards.remove(index)
         player.cardsPlayed[rounds.toString()] = player.cardsPlayed[rounds.toString()] + playerCardPlayed
-
+        player.attackPoints =+ playerCardPlayed.attack
         if (shouldBotPlay()) {
+            paralized = 1
+            playerCardPlayed = player.cards[index]
+            //player.cards.remove(index)
+            //player.cardsPlayed[rounds.toString()] = player.cardsPlayed[rounds.toString()] + playerCardPlayed
+            //player.attackPoints += playerCardPlayed.attack
+            if (turn) {
+                paralized = 0
+                if (player.attackPoints > bot.attackPoints) {
+                    finishround()
+                    bot.life =- bot.life
+                } else if (bot.attackPoints > player.attackPoints) {
+                    finishround()
+                    player.life =- player.life
+                } else {
+                    finishround()
+                    bot.life =- bot.life
+                    player.life =- player.life
+                }
+            }
             return playBotTurn(playerCardPlayed, botActions)
         } else {
             BotAction botAction = playBot()
@@ -110,14 +131,20 @@ class CardsController {
         }
     }
 
-
     private boolean shouldBotPlay() {
+        if (paralized == 1) {
+            return true
+        }
         return bot.cards.isEmpty() || random.nextBoolean()
     }
 
+    private void finishround() {
+        player.attackPoints = 0
+        bot.attackPoints = 0
+        rounds++
+    }
 
-
-    private  ResponseEntity playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
+    private ResponseEntity playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
         PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed, botActions: botActions)
         return ResponseEntity.ok(playOutput)
     }
@@ -128,15 +155,35 @@ class CardsController {
             BotAction botAction = playBot()
             botActions.add(botAction)
         }
-
+        if (player.attackPoints > bot.attackPoints) {
+            finishround()
+            bot.life =- bot.life
+        } else if (bot.attackPoints > player.attackPoints) {
+            finishround()
+            player.life =- player.life
+        } else {
+            finishround()
+            bot.life =- bot.life
+            player.life =- player.life
+        }
         PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions)
         return ResponseEntity.ok(playOutput)
     }
 
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
+        if (bot.life <= 0) {
+            String winner = "Você ganhou"
+            return ResponseEntity.ok(winner)
+        } else if (player.life == 0) {
+            String winner = "O BOT ENFIOU O DEDO NO SEU CU ganhou!"
+            return ResponseEntity.ok(winner)
+        } else if (player.life <= 0 && bot.life <= 0) {
+            String winner = "Empate!"
+            return ResponseEntity.ok(winner)
+        }
         List<BotAction> botActions = []
-        boolean turn = input.passTurn
+        turn = input.passTurn
         if (player.cards.isEmpty()) {
             turn = true
         }
@@ -147,17 +194,24 @@ class CardsController {
         }
     }
 
-    //@Todo
-// Se o bot passar sua vez, somente o jogador pode jogar até que ele passa a vez tambem
 // quando o turno encerrar, a rota /play deveria retornar o resultado dele turno
 // TALVEZ deva existir uma rota start_round
 // o contador de round tem que ser incrementado ao fim de cada round
 // quando a partida acabar, a rota /play deve retornar o resultado da partida
 
-//    @GetMapping("/status")
-//    ResponseEntity getStatus() {
-//      @TODO deve retornar o status atual da partida, cartas disponiveis do player, round atual, placar e o que mais for improtante
-//    }
+    //@GetMapping("/status")
+    //ResponseEntity getStatus() {
+        //StatusGameOutput statusOutPut = new StatusGameOutput(botCards: botCards, playerCards: playerCards,
+        //        playerLife: , botLife:, rounds: rounds)
+        //@TODO deve retornar o status atual da partida, cartas disponiveis do player, round atual,
+        // placar e o que mais for improtante
+        //return org.springframework.http.ResponseEntity.ok(bot.cards)
+        //return org.springframework.http.ResponseEntity.ok(player.cards)
+        //return org.springframework.http.ResponseEntity.ok(player.life)
+        //return ResponseEntity.ok(bot.life)
+        //return ResponseEntity.ok(rounds)
+        //return ResponseEntity.ok(statusOutput)
+    //}
 }
 
 
