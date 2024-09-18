@@ -95,13 +95,16 @@ class CardsController {
         return ResponseEntity.ok(bot.cards)
     }
 
-    private PlayGameOutput handlePlayerTurn(PlayInput input, List<BotAction> botActions) {
-        int index = player.cards.findIndexOf { it.id == input.cardId }
-        if (index < 0) {
-            return ResponseEntity.badRequest().build()
+    private boolean invalidCard(PlayInput input) {
+        input.index = player.cards.findIndexOf { it.id == input.cardId }
+        if (input.index < 0) {
+            return true
         }
-        Card playerCardPlayed = player.cards[index]
-        player.cards.remove(index)
+        return false
+    }
+    private PlayGameOutput handlePlayerTurn(PlayInput input, List<BotAction> botActions) {
+        Card playerCardPlayed = player.cards[input.index]
+        player.cards.remove(input.index)
         player.cardsPlayed[currentRound.toString()] = player.cardsPlayed[currentRound.toString()] + playerCardPlayed
         player.attackPoints = player.attackPoints + playerCardPlayed.attack
         if (shouldBotPlay()) {
@@ -170,7 +173,7 @@ class CardsController {
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
         if (bot.life <= 0) {
-            playOutPut =
+
             String winner = "Você ganhou"
             return ResponseEntity.ok(winner)
         } else if (player.life <= 0) {
@@ -186,7 +189,12 @@ class CardsController {
             turn = true
         }
         if (!turn) {
-            return ResponseEntity.ok(handlePlayerTurn(input, botActions))
+            invalidCard(input)
+            if (invalidCard(input)) {
+                return ResponseEntity.badRequest().build()
+            } else {
+                return ResponseEntity.ok(handlePlayerTurn(input, botActions))
+            }
         } else {
             return ResponseEntity.ok(handleBotTurn(botActions))
         }
