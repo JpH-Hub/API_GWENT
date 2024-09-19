@@ -110,7 +110,6 @@ class CardsController {
         if (shouldBotPlay()) {
             paralized = 1
             if (turn) {
-                paralized = 0
                 if (player.attackPoints > bot.attackPoints) {
                     finishround()
                     bot.life = bot.life - 1
@@ -123,10 +122,37 @@ class CardsController {
                     player.life = player.life - 1
                 }
             }
+            if (bot.life <= 0) {
+                String gameResult = player.name + " ganhou o Jogo!"
+                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+                return playOutput
+            } else if (player.life <= 0) {
+                String gameResult = "Bot ganhou o Jogo!"
+                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+                return playOutput
+            } else if (player.life <= 0 && bot.life <= 0) {
+                String gameResult = "Empatou o Jogo!"
+                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+                return playOutput
+            }
+            paralized = 0
             return playBotTurn(playerCardPlayed, botActions)
         } else {
             BotAction botAction = playBot()
             botActions.add(botAction)
+            if (bot.life <= 0) {
+                String gameResult = player.name + " ganhou o Jogo!"
+                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+                return playOutput
+            } else if (player.life <= 0) {
+                String gameResult = "Bot ganhou o Jogo!"
+                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+                return playOutput
+            } else if (player.life <= 0 && bot.life <= 0) {
+                String gameResult = "Empatou o Jogo!"
+                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+                return playOutput
+            }
             return playBotTurn(playerCardPlayed, botActions)
         }
     }
@@ -166,23 +192,26 @@ class CardsController {
             bot.life = bot.life - 1
             player.life = player.life - 1
         }
+        if (bot.life <= 0) {
+            String gameResult = player.name + " ganhou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return playOutput
+        } else if (player.life <= 0) {
+            String gameResult = "Bot ganhou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return playOutput
+        } else if (player.life <= 0 && bot.life <= 0) {
+            String gameResult = "Empatou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return playOutput
+        }
         PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions)
         return playOutput
     }
 
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
-        if (bot.life <= 0) {
 
-            String winner = "Você ganhou"
-            return ResponseEntity.ok(winner)
-        } else if (player.life <= 0) {
-            String winner = "O bot ganhou!"
-            return ResponseEntity.ok(winner)
-        } else if (player.life <= 0 && bot.life <= 0) {
-            String winner = "Empate!"
-            return ResponseEntity.ok(winner)
-        }
         List<BotAction> botActions = []
         turn = input.passTurn
         if (player.cards.isEmpty()) {
