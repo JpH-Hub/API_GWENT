@@ -1,21 +1,8 @@
 package API_CardGameSpring.controller
 
-import API_CardGameSpring.models.BotAction
-import API_CardGameSpring.models.Bot
-import API_CardGameSpring.models.Card
-import API_CardGameSpring.models.PlayGameOutput
-import API_CardGameSpring.models.PlayInput
-import API_CardGameSpring.models.Player
-import API_CardGameSpring.models.StartGameInput
-import API_CardGameSpring.models.StartGameOutput
-import API_CardGameSpring.models.StatusGameOutput
-import com.fasterxml.jackson.annotation.JsonProperty
+import API_CardGameSpring.models.*
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/cards")
@@ -37,7 +24,7 @@ class CardsController {
             "14": new Card(id: 14, name: "Morvran Voorhis", attack: 10, position: "SIEGE", faction: "NilfGaard"),
             "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
-    private int paralized
+    private int botTurnPassed
     private boolean turn
     private Random random = new Random()
     private Bot bot = new Bot()
@@ -57,6 +44,7 @@ class CardsController {
         player.life = 2
         bot.life = 2
         bot.cards = []
+        player.cards = []
         player.name = input.player.name
         bot.cardsPlayed = ["1": [], "2": [], "3": []]
         BotAction botAction = new BotAction()
@@ -102,13 +90,14 @@ class CardsController {
         }
         return false
     }
+
     private PlayGameOutput handlePlayerTurn(PlayInput input, List<BotAction> botActions) {
         Card playerCardPlayed = player.cards[input.index]
         player.cards.remove(input.index)
         player.cardsPlayed[currentRound.toString()] = player.cardsPlayed[currentRound.toString()] + playerCardPlayed
         player.attackPoints = player.attackPoints + playerCardPlayed.attack
         if (shouldBotPlay()) {
-            paralized = 1
+            botTurnPassed = 1
             if (turn) {
                 if (player.attackPoints > bot.attackPoints) {
                     finishround()
@@ -122,34 +111,34 @@ class CardsController {
                     player.life = player.life - 1
                 }
             }
-            if (bot.life <= 0) {
-                String gameResult = player.name + " ganhou o Jogo!"
+            if (player.life <= 0 && bot.life <= 0) {
+                String gameResult = "Empatou o Jogo!"
+                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+                return playOutput
+            } else if (bot.life <= 0) {
+               String  gameResult = player.name + " ganhou o Jogo!"
                 PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
                 return playOutput
             } else if (player.life <= 0) {
                 String gameResult = "Bot ganhou o Jogo!"
                 PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
                 return playOutput
-            } else if (player.life <= 0 && bot.life <= 0) {
-                String gameResult = "Empatou o Jogo!"
-                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-                return playOutput
             }
-            paralized = 0
+            botTurnPassed = 0
             return playBotTurn(playerCardPlayed, botActions)
         } else {
             BotAction botAction = playBot()
             botActions.add(botAction)
-            if (bot.life <= 0) {
-                String gameResult = player.name + " ganhou o Jogo!"
+            if (player.life <= 0 && bot.life <= 0) {
+               String gameResult = "Empatou o Jogo!"
+                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+                return playOutput
+            } else if (bot.life <= 0) {
+               String gameResult = player.name + " ganhou o Jogo!"
                 PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
                 return playOutput
             } else if (player.life <= 0) {
-                String gameResult = "Bot ganhou o Jogo!"
-                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-                return playOutput
-            } else if (player.life <= 0 && bot.life <= 0) {
-                String gameResult = "Empatou o Jogo!"
+               String gameResult = "Bot ganhou o Jogo!"
                 PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
                 return playOutput
             }
@@ -158,10 +147,12 @@ class CardsController {
     }
 
     private boolean shouldBotPlay() {
-        if (paralized == 1) {
+        if (bot.life == 1 && bot.cards.isEmpty()) {
             return true
+        } else if (bot.life == 1) {
+            return false
         }
-        return bot.cards.isEmpty() || random.nextBoolean()
+        return botTurnPassed == 1 || bot.cards.isEmpty() || random.nextBoolean()
     }
 
     private void finishround() {
@@ -177,9 +168,13 @@ class CardsController {
 
     private PlayGameOutput handleBotTurn(List<BotAction> botActions) {
         while (!shouldBotPlay()) {
-            shouldBotPlay()
-            BotAction botAction = playBot()
-            botActions.add(botAction)
+            if (bot.attackPoints > player.attackPoints) {
+                break
+            } else {
+                shouldBotPlay()
+                BotAction botAction = playBot()
+                botActions.add(botAction)
+            }
         }
         if (player.attackPoints > bot.attackPoints) {
             finishround()
@@ -192,16 +187,16 @@ class CardsController {
             bot.life = bot.life - 1
             player.life = player.life - 1
         }
-        if (bot.life <= 0) {
+        if (player.life <= 0 && bot.life <= 0) {
+           String gameResult = "Empatou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return playOutput
+        } else if (bot.life <= 0) {
             String gameResult = player.name + " ganhou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
         } else if (player.life <= 0) {
             String gameResult = "Bot ganhou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
-        } else if (player.life <= 0 && bot.life <= 0) {
-            String gameResult = "Empatou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
         }
