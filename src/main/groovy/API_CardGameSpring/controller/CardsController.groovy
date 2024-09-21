@@ -137,14 +137,14 @@ class CardsController {
 
     private PlayGameOutput playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
         if (botTurnPassed == 1){
-            String gameResult =  player.name + ": jogou : " + playerCardPlayed.name + ". Bot jogada: Passou a vez " +
-                     "e o round atual é :" + currentRound
+            String gameResult =  player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: passou a vez." +
+                     " Round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
                     botActions: botActions, gameResult: gameResult)
           return  playOutput
         }else{
-            String gameResult =  player.name + ": jogou : " + playerCardPlayed.name + ". Bot jogada: " +
-                    botActions.botCardPlayed.name + "  " + currentRound
+            String gameResult =  player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: jogou a carta " +
+                    botActions.botCardPlayed.name + ". Round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
                     botActions: botActions, gameResult: gameResult)
             return playOutput
@@ -172,17 +172,22 @@ class CardsController {
             bot.life = bot.life - 1
             player.life = player.life - 1
         }
-        if (botTurnPassed == 1 && turn){
-            String gameResult = player.name + " jogada: passou a vez. Bot jogada: e passou a vez " +
-        "e o round atual é: " + currentRound
+        if (turn && botTurnPassed == 1 && botActions.size() > 0) {
+            String gameResult = player.name + ": passou a vez. Bot: jogou a carta " +
+                    botActions.botCardPlayed.name + " e depois passou a vez. Novo round atual = " + currentRound
+            PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
+            return playOutput
+        } else if (botTurnPassed == 1 && turn){
+            String gameResult = player.name + ": passou a vez. Bot: passou a vez. Novo round atual = " + currentRound
+            PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
+            return playOutput
+        } else {
+            String gameResult =  player.name + ": passou a vez. Bot: jogou a carta " +
+                    botActions.botCardPlayed.name + ". Novo round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
             return playOutput
         }
-
-        PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
-        return playOutput
     }
-
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
         if (player.life <= 0 && bot.life <= 0) {
