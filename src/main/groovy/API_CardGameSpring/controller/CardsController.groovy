@@ -99,6 +99,7 @@ class CardsController {
         if (shouldBotPlay()) {
             botTurnPassed = 1
             if (turn) {
+                botTurnPassed = 0
                 if (player.attackPoints > bot.attackPoints) {
                     finishround()
                     bot.life = bot.life - 1
@@ -111,37 +112,10 @@ class CardsController {
                     player.life = player.life - 1
                 }
             }
-            if (player.life <= 0 && bot.life <= 0) {
-                String gameResult = "Empatou o Jogo!"
-                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-                return playOutput
-            } else if (bot.life <= 0) {
-               String  gameResult = player.name + " ganhou o Jogo!"
-                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-                return playOutput
-            } else if (player.life <= 0) {
-                String gameResult = "Bot ganhou o Jogo!"
-                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-                return playOutput
-            }
-            botTurnPassed = 0
             return playBotTurn(playerCardPlayed, botActions)
         } else {
             BotAction botAction = playBot()
             botActions.add(botAction)
-            if (player.life <= 0 && bot.life <= 0) {
-               String gameResult = "Empatou o Jogo!"
-                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-                return playOutput
-            } else if (bot.life <= 0) {
-               String gameResult = player.name + " ganhou o Jogo!"
-                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-                return playOutput
-            } else if (player.life <= 0) {
-               String gameResult = "Bot ganhou o Jogo!"
-                PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-                return playOutput
-            }
             return playBotTurn(playerCardPlayed, botActions)
         }
     }
@@ -162,7 +136,8 @@ class CardsController {
     }
 
     private PlayGameOutput playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
-        PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed, botActions: botActions)
+        String gameResult = player.name + " jogada: " + playerCardPlayed.name + ". Bot jogada: " + botActions
+        PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed, botActions: botActions, gameResult: gameResult)
         return playOutput
     }
 
@@ -187,41 +162,41 @@ class CardsController {
             bot.life = bot.life - 1
             player.life = player.life - 1
         }
-        if (player.life <= 0 && bot.life <= 0) {
-           String gameResult = "Empatou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
-        } else if (bot.life <= 0) {
-            String gameResult = player.name + " ganhou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
-        } else if (player.life <= 0) {
-            String gameResult = "Bot ganhou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
-        }
-        PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions)
+        // unica implementação que falta é o nome da carta q o bot jogou
+        String gameResult = player.name + " jogada: passou a vez. Bot jogada: " + botActions
+        PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
         return playOutput
     }
 
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
-
-        List<BotAction> botActions = []
-        turn = input.passTurn
-        if (player.cards.isEmpty()) {
-            turn = true
+        if (player.life <= 0 && bot.life <= 0) {
+            String gameResult = "Empatou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return ResponseEntity.ok(playOutput)
+        } else if (bot.life <= 0) {
+            String gameResult = player.name + " ganhou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return ResponseEntity.ok(playOutput)
+        } else if (player.life <= 0) {
+            String gameResult = "Bot ganhou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return ResponseEntity.ok(playOutput)
         }
-        if (!turn) {
-            invalidCard(input)
-            if (invalidCard(input)) {
-                return ResponseEntity.badRequest().build()
-            } else {
-                return ResponseEntity.ok(handlePlayerTurn(input, botActions))
+            List<BotAction> botActions = []
+            turn = input.passTurn
+            if (player.cards.isEmpty()) {
+                turn = true
             }
-        } else {
-            return ResponseEntity.ok(handleBotTurn(botActions))
-        }
+            if (!turn) {
+                if (invalidCard(input)) {
+                    return ResponseEntity.badRequest().build()
+                } else {
+                    return ResponseEntity.ok(handlePlayerTurn(input, botActions))
+                }
+            } else {
+                return ResponseEntity.ok(handleBotTurn(botActions))
+            }
     }
 
     @GetMapping("/status")
