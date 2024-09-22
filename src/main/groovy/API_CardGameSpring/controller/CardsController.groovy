@@ -109,7 +109,6 @@ class CardsController {
                     finishround()
                     bot.life = bot.life - 1
                     player.life = player.life - 1
-
                 }
             }
             return playBotTurn(playerCardPlayed, botActions)
