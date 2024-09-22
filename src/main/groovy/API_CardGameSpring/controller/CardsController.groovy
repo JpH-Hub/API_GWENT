@@ -126,8 +126,10 @@ class CardsController {
             return false
         } else if (bot.life == 1) {
             return true
+        } else if (botTurnPassed) {
+            return false
         }
-        return botTurnPassed || random.nextBoolean()
+        return random.nextBoolean()
     }
 
     private void finishround() {
@@ -137,8 +139,10 @@ class CardsController {
     }
 
     private PlayGameOutput playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
+        if (player.life == 0 || bot.life == 0) {
+            return gameWinner(botActions)
+        }
         if (botTurnPassed) {
-            botTurnPassed = false
             String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: passou a vez." +
                     " Round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
@@ -173,9 +177,12 @@ class CardsController {
             bot.life = bot.life - 1
             player.life = player.life - 1
         }
-        if (passTurn && botTurnPassed && botActions.size() > 0) {
+        if (player.life == 0 || bot.life == 0) {
+            return gameWinner(botActions)
+        }
+        if (passTurn && botActions.size() > 0) {
             String gameResult = player.name + ": passou a vez. Bot: jogou a carta " +
-                    botActions.botCardPlayed.name + " e depois passou a vez. Novo round atual = " + currentRound
+                    botActions.botCardPlayed.name + " e depois passou a vez. novo round =" + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
             return playOutput
         } else {
@@ -185,20 +192,29 @@ class CardsController {
         }
     }
 
-    @PostMapping("/play")
-    ResponseEntity play(@RequestBody PlayInput input) {
+    private PlayGameOutput gameWinner(List<BotAction> botActions ) {
         if (player.life <= 0 && bot.life <= 0) {
             String gameResult = "Empatou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return ResponseEntity.ok(playOutput)
+            return playOutput
         } else if (bot.life <= 0) {
             String gameResult = player.name + " ganhou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return ResponseEntity.ok(playOutput)
+            return playOutput
         } else if (player.life <= 0) {
-            String gameResult = "Bot ganhou o Jogo!"
+            String gameResult = player.name + ": passou a vez. Bot: jogou a carta " +ssssss
+                    botActions.botCardPlayed.name + " e depois passou a vez. Bot ganhou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return ResponseEntity.ok(playOutput)
+            return playOutput
+        }
+        return null
+    }
+
+
+    @PostMapping("/play")
+    ResponseEntity play(@RequestBody PlayInput input) {
+        if (currentRound == 4){
+            return ResponseEntity.badRequest().build()
         }
         List<BotAction> botActions = []
         passTurn = input.passTurn
