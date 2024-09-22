@@ -24,7 +24,7 @@ class CardsController {
             "14": new Card(id: 14, name: "Morvran Voorhis", attack: 10, position: "SIEGE", faction: "NilfGaard"),
             "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
-    private boolean botTurnPassed
+    private boolean botTurnPassed = false
     private boolean passTurn
     private Random random = new Random()
     private Bot bot = new Bot()
@@ -82,7 +82,7 @@ class CardsController {
         return new BotAction(botCardPlayed: botCardPlayed)
     }
 
-    private boolean invalidCard(PlayInput input) {
+    private boolean cardIdInvalid(PlayInput input) {
         input.index = player.cards.findIndexOf { it.id == input.cardId }
         if (input.index < 0) {
             return true
@@ -96,9 +96,13 @@ class CardsController {
         player.cardsPlayed[currentRound.toString()] = player.cardsPlayed[currentRound.toString()] + playerCardPlayed
         player.attackPoints = player.attackPoints + playerCardPlayed.attack
         if (shouldBotPlay()) {
+            botTurnPassed = false
+            BotAction botAction = playBot()
+            botActions.add(botAction)
+            return playBotTurn(playerCardPlayed, botActions)
+        } else {
             botTurnPassed = true
-            if (!passTurn) {
-                botTurnPassed = false
+            if (passTurn) {
                 if (player.attackPoints > bot.attackPoints) {
                     finishround()
                     bot.life = bot.life - 1
@@ -112,20 +116,18 @@ class CardsController {
                 }
             }
             return playBotTurn(playerCardPlayed, botActions)
-        } else {
-            BotAction botAction = playBot()
-            botActions.add(botAction)
-            return playBotTurn(playerCardPlayed, botActions)
         }
     }
 
     private boolean shouldBotPlay() {
         if (bot.life == 1 && bot.cards.isEmpty()) {
-            return true
-        } else if (bot.life == 1) {
             return false
+        } else if (bot.cards.isEmpty()) {
+            return false
+        } else if (bot.life == 1) {
+            return true
         }
-        return botTurnPassed || bot.cards.isEmpty() || random.nextBoolean()
+        return botTurnPassed || random.nextBoolean()
     }
 
     private void finishround() {
@@ -135,14 +137,15 @@ class CardsController {
     }
 
     private PlayGameOutput playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
-        if (botTurnPassed){
-            String gameResult =  player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: passou a vez." +
-                     " Round atual = " + currentRound
+        if (botTurnPassed) {
+            botTurnPassed = false
+            String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: passou a vez." +
+                    " Round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
                     botActions: botActions, gameResult: gameResult)
-          return  playOutput
-        }else{
-            String gameResult =  player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: jogou a carta " +
+            return playOutput
+        } else {
+            String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: jogou a carta " +
                     botActions.botCardPlayed.name + ". Round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
                     botActions: botActions, gameResult: gameResult)
@@ -151,11 +154,10 @@ class CardsController {
     }
 
     private PlayGameOutput handleBotTurn(List<BotAction> botActions) {
-        while (!shouldBotPlay()) {
+        while (shouldBotPlay()) {
             if (bot.attackPoints > player.attackPoints) {
                 break
             } else {
-                shouldBotPlay()
                 BotAction botAction = playBot()
                 botActions.add(botAction)
             }
@@ -171,22 +173,18 @@ class CardsController {
             bot.life = bot.life - 1
             player.life = player.life - 1
         }
-        if (passTurn && !botTurnPassed && botActions.size() > 0) {
+        if (passTurn && botTurnPassed && botActions.size() > 0) {
             String gameResult = player.name + ": passou a vez. Bot: jogou a carta " +
                     botActions.botCardPlayed.name + " e depois passou a vez. Novo round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
             return playOutput
-        } else if (botTurnPassed && passTurn){
-            String gameResult = player.name + ": passou a vez. Bot: passou a vez. Novo round atual = " + currentRound
-            PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
-            return playOutput
         } else {
-            String gameResult =  player.name + ": passou a vez. Bot: jogou a carta " +
-                    botActions.botCardPlayed.name + ". Novo round atual = " + currentRound
+            String gameResult = player.name + ": passou a vez. Bot: passou a vez. Novo round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
             return playOutput
         }
     }
+
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
         if (player.life <= 0 && bot.life <= 0) {
@@ -208,7 +206,7 @@ class CardsController {
             passTurn = true
         }
         if (!passTurn) {
-            if (invalidCard(input)) {
+            if (cardIdInvalid(input)) {
                 return ResponseEntity.badRequest().build()
             } else {
                 return ResponseEntity.ok(handlePlayerTurn(input, botActions))
