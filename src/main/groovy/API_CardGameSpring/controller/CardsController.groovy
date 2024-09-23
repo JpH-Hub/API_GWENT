@@ -24,6 +24,7 @@ class CardsController {
             "14": new Card(id: 14, name: "Morvran Voorhis", attack: 10, position: "SIEGE", faction: "NilfGaard"),
             "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
+    //Todo - USAR POO NO botTurnPassed E passTURN
     private boolean botTurnPassed = false
     private boolean passTurn
     private Random random = new Random()
@@ -31,6 +32,7 @@ class CardsController {
     private Player player = new Player()
     private int currentRound = 0
 
+    //Todo - Cria uma rota que permita adicionar novas cartas
     @GetMapping
     ResponseEntity getCards() {
         return ResponseEntity.ok(cards.values().toList())
@@ -104,13 +106,13 @@ class CardsController {
             botTurnPassed = true
             if (passTurn) {
                 if (player.attackPoints > bot.attackPoints) {
-                    finishround()
+                    finishRound()
                     bot.life = bot.life - 1
                 } else if (bot.attackPoints > player.attackPoints) {
-                    finishround()
+                    finishRound()
                     player.life = player.life - 1
                 } else {
-                    finishround()
+                    finishRound()
                     bot.life = bot.life - 1
                     player.life = player.life - 1
                 }
@@ -131,8 +133,8 @@ class CardsController {
         }
         return random.nextBoolean()
     }
-
-    private void finishround() {
+    //Arruma os efeitos colaterais
+    private void finishRound() {
         player.attackPoints = 0
         bot.attackPoints = 0
         currentRound++
@@ -176,13 +178,13 @@ class CardsController {
             }
         }
         if (player.attackPoints > bot.attackPoints) {
-            finishround()
+            finishRound()
             bot.life = bot.life - 1
         } else if (bot.attackPoints > player.attackPoints) {
-            finishround()
+            finishRound()
             player.life = player.life - 1
         } else {
-            finishround()
+            finishRound()
             bot.life = bot.life - 1
             player.life = player.life - 1
         }
