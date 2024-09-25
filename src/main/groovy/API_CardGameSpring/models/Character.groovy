@@ -5,4 +5,5 @@ class Character {
     Map<String, List<Card>> cardsPlayed = ["1":[], "2":[], "3": []]
     Integer life
     Integer attackPoints
+    Boolean passTurn
 }

@@ -1,0 +1,21 @@
+meta {
+  name: CreateCard
+  type: http
+  seq: 8
+}
+
+post {
+  url: http://localhost:8080/cards/add-cards
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "id": 16,
+    "name": "Carpeado",
+    "attack": 99,
+    "position": "HORSE",
+    "faction": "Geraldo"
+  }
+}

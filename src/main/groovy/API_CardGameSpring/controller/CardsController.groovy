@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/cards")
 class CardsController {
+    //Todo -> Arruma os efeitos colaterais
     private Map<String, Card> cards = [
             "1" : new Card(id: 1, name: "Cirilla", attack: 15, position: "MELEE", faction: "neutral"),
             "2" : new Card(id: 2, name: "Gerald", attack: 15, position: "MELEE", faction: "neutral"),
@@ -17,25 +18,31 @@ class CardsController {
             "7" : new Card(id: 7, name: "Yennefer", attack: 7, position: "RANGED", faction: "neutral"),
             "8" : new Card(id: 8, name: "Milva", attack: 10, position: "RANGED", faction: "Scoia'tael"),
             "9" : new Card(id: 9, name: "Eithné", attack: 10, position: "RANGED", faction: "Scoia'tael"),
-            "10": new Card(id: 10, name: "Iorvet", attack: 10, position: "RANGED", faction: "Scoia'tael"),
+            "10": new Card(id: 10, name: "Iorveth", attack: 10, position: "RANGED", faction: "Scoia'tael"),
             "11": new Card(id: 11, name: "Catapult", attack: 8, position: "SIEGE", faction: "Northern Realms"),
             "12": new Card(id: 12, name: "Thaler", attack: 1, position: "SIEGE", faction: "Northern Realms"),
             "13": new Card(id: 13, name: "Fire Elemental", attack: 6, position: "SIEGE", faction: "Mosters"),
             "14": new Card(id: 14, name: "Morvran Voorhis", attack: 10, position: "SIEGE", faction: "NilfGaard"),
             "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
-    //Todo - USAR POO NO botTurnPassed E passTURN
-    private boolean botTurnPassed = false
-    private boolean passTurn
     private Random random = new Random()
     private Bot bot = new Bot()
     private Player player = new Player()
     private int currentRound = 0
 
-    //Todo - Cria uma rota que permita adicionar novas cartas
     @GetMapping
     ResponseEntity getCards() {
         return ResponseEntity.ok(cards.values().toList())
+    }
+
+    @PostMapping("add-cards")
+    ResponseEntity createCard(@RequestBody Card newCard) {
+        Card card = cards[newCard.id]
+        if (card != null) {
+            return ResponseEntity.status(409).build()
+        }
+        cards.put(newCard.id.toString(), newCard)
+        return ResponseEntity.noContent().build()
     }
 
     @PostMapping("/start_game")
@@ -75,6 +82,34 @@ class CardsController {
         return ResponseEntity.ok(bot.cards)
     }
 
+    @PostMapping("/play")
+    ResponseEntity play(@RequestBody PlayInput input) {
+        if (player.life <= 0 || bot.life <= 0) {
+            return ResponseEntity.notFound().build()
+        }
+        List<BotAction> botActions = []
+        player.passTurn = input.passTurn
+        if (player.cards.isEmpty()) {
+            player.passTurn = true
+        }
+        if (!player.passTurn) {
+            if (cardIdInvalid(input)) {
+                return ResponseEntity.badRequest().build()
+            } else {
+                return ResponseEntity.ok(handlePlayerTurn(input, botActions))
+            }
+        } else {
+            return ResponseEntity.ok(handleBotTurn(botActions))
+        }
+    }
+
+    @GetMapping("/status")
+    ResponseEntity getStatus() {
+        StatusGameOutput statusOutput = new StatusGameOutput(botCards: bot.cards, playerCards: player.cards,
+                playerLife: player.life.toString(), botLife: bot.life.toString(), currentRound: currentRound,
+                playerAttack: player.attackPoints.toString(), botAttack: bot.attackPoints.toString())
+        return ResponseEntity.ok(statusOutput)
+    }
     private BotAction playBot() {
         int index = random.nextInt(bot.cards.size())
         Card botCardPlayed = bot.cards.get(index)
@@ -83,91 +118,6 @@ class CardsController {
         bot.attackPoints = bot.attackPoints + botCardPlayed.attack
         return new BotAction(botCardPlayed: botCardPlayed)
     }
-
-    private boolean cardIdInvalid(PlayInput input) {
-        input.index = player.cards.findIndexOf { it.id == input.cardId }
-        if (input.index < 0) {
-            return true
-        }
-        return false
-    }
-
-    private PlayGameOutput handlePlayerTurn(PlayInput input, List<BotAction> botActions) {
-        Card playerCardPlayed = player.cards[input.index]
-        player.cards.remove(input.index)
-        player.cardsPlayed[currentRound.toString()] = player.cardsPlayed[currentRound.toString()] + playerCardPlayed
-        player.attackPoints = player.attackPoints + playerCardPlayed.attack
-        if (shouldBotPlay()) {
-            botTurnPassed = false
-            BotAction botAction = playBot()
-            botActions.add(botAction)
-            return playBotTurn(playerCardPlayed, botActions)
-        } else {
-            botTurnPassed = true
-            if (passTurn) {
-                if (player.attackPoints > bot.attackPoints) {
-                    finishRound()
-                    bot.life = bot.life - 1
-                } else if (bot.attackPoints > player.attackPoints) {
-                    finishRound()
-                    player.life = player.life - 1
-                } else {
-                    finishRound()
-                    bot.life = bot.life - 1
-                    player.life = player.life - 1
-                }
-            }
-            return playBotTurn(playerCardPlayed, botActions)
-        }
-    }
-
-    private boolean shouldBotPlay() {
-        if (bot.life == 1 && bot.cards.isEmpty()) {
-            return false
-        } else if (bot.cards.isEmpty()) {
-            return false
-        } else if (bot.life == 1) {
-            return true
-        } else if (botTurnPassed) {
-            return false
-        }
-        return random.nextBoolean()
-    }
-    //Arruma os efeitos colaterais
-    private void finishRound() {
-        player.attackPoints = 0
-        bot.attackPoints = 0
-        currentRound++
-    }
-
-    private PlayGameOutput playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
-        if (player.life <= 0 && bot.life <= 0) {
-            String gameResult = "Empatou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
-        } else if (bot.life <= 0) {
-            String gameResult = player.name + " ganhou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
-        } else if (player.life <= 0) {
-            String gameResult = "Bot ganhou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
-        } else if (botTurnPassed) {
-            String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: passou a vez." +
-                    " Round atual = " + currentRound
-            PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
-                    botActions: botActions, gameResult: gameResult)
-            return playOutput
-        } else {
-            String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: jogou a carta " +
-                    botActions.botCardPlayed.name + ". Round atual = " + currentRound
-            PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
-                    botActions: botActions, gameResult: gameResult)
-            return playOutput
-        }
-    }
-
     private PlayGameOutput handleBotTurn(List<BotAction> botActions) {
         while (shouldBotPlay()) {
             if (bot.attackPoints > player.attackPoints) {
@@ -200,7 +150,7 @@ class CardsController {
             String gameResult = "Bot ganhou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
-        }else if (passTurn && botActions.size() > 0) {
+        }else if (player.passTurn && botActions.size() > 0) {
             String gameResult = player.name + ": passou a vez. Bot: jogou a carta " +
                     botActions.botCardPlayed.name + " e depois passou a vez. novo round =" + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
@@ -212,34 +162,90 @@ class CardsController {
         }
     }
 
-    @PostMapping("/play")
-    ResponseEntity play(@RequestBody PlayInput input) {
-        if (player.life <= 0 || bot.life <= 0) {
-            return ResponseEntity.notFound().build()
-        }
-        List<BotAction> botActions = []
-        passTurn = input.passTurn
-        if (player.cards.isEmpty()) {
-            passTurn = true
-        }
-        if (!passTurn) {
-            if (cardIdInvalid(input)) {
-                return ResponseEntity.badRequest().build()
-            } else {
-                return ResponseEntity.ok(handlePlayerTurn(input, botActions))
-            }
+    private PlayGameOutput playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
+        if (player.life <= 0 && bot.life <= 0) {
+            String gameResult = "Empatou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return playOutput
+        } else if (bot.life <= 0) {
+            String gameResult = player.name + " ganhou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return playOutput
+        } else if (player.life <= 0) {
+            String gameResult = "Bot ganhou o Jogo!"
+            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
+            return playOutput
+        } else if (bot.passTurn) {
+            String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: passou a vez." +
+                    " Round atual = " + currentRound
+            PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
+                    botActions: botActions, gameResult: gameResult)
+            return playOutput
         } else {
-            return ResponseEntity.ok(handleBotTurn(botActions))
+            String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: jogou a carta " +
+                    botActions.botCardPlayed.name + ". Round atual = " + currentRound
+            PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
+                    botActions: botActions, gameResult: gameResult)
+            return playOutput
+        }
+    }
+    private void finishRound() {
+        player.attackPoints = 0
+        bot.attackPoints = 0
+        currentRound++
+    }
+
+    private boolean shouldBotPlay() {
+        if (bot.life == 1 && bot.cards.isEmpty()) {
+            return false
+        } else if (bot.cards.isEmpty()) {
+            return false
+        } else if (bot.life == 1) {
+            return true
+        } else if (bot.passTurn) {
+            return false
+        }
+        return random.nextBoolean()
+    }
+
+
+    private PlayGameOutput handlePlayerTurn(PlayInput input, List<BotAction> botActions) {
+        Card playerCardPlayed = player.cards[input.index]
+        player.cards.remove(input.index)
+        player.cardsPlayed[currentRound.toString()] = player.cardsPlayed[currentRound.toString()] + playerCardPlayed
+        player.attackPoints = player.attackPoints + playerCardPlayed.attack
+        if (shouldBotPlay()) {
+            bot.passTurn = false
+            BotAction botAction = playBot()
+            botActions.add(botAction)
+            return playBotTurn(playerCardPlayed, botActions)
+        } else {
+            bot.passTurn = true
+            if (player.passTurn) {
+                if (player.attackPoints > bot.attackPoints) {
+                    finishRound()
+                    bot.life = bot.life - 1
+                } else if (bot.attackPoints > player.attackPoints) {
+                    finishRound()
+                    player.life = player.life - 1
+                } else {
+                    finishRound()
+                    bot.life = bot.life - 1
+                    player.life = player.life - 1
+                }
+            }
+            return playBotTurn(playerCardPlayed, botActions)
         }
     }
 
-    @GetMapping("/status")
-    ResponseEntity getStatus() {
-        StatusGameOutput statusOutput = new StatusGameOutput(botCards: bot.cards, playerCards: player.cards,
-                playerLife: player.life.toString(), botLife: bot.life.toString(), currentRound: currentRound,
-                playerAttack: player.attackPoints.toString(), botAttack: bot.attackPoints.toString())
-        return ResponseEntity.ok(statusOutput)
+    private boolean cardIdInvalid(PlayInput input) {
+        input.index = player.cards.findIndexOf { it.id == input.cardId }
+        if (input.index < 0) {
+            return true
+        }
+        return false
     }
+
 }
 
 
