@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/cards")
 class CardsController {
     //Todo -> Arruma os efeitos colaterais
+    //TODO UTILIZAR PROGRAMAÇÃO E ORIENTADA A OBJETOS
     private Map<String, Card> cards = [
             "1" : new Card(id: 1, name: "Cirilla", attack: 15, position: "MELEE", faction: "neutral"),
             "2" : new Card(id: 2, name: "Gerald", attack: 15, position: "MELEE", faction: "neutral"),
@@ -21,14 +22,15 @@ class CardsController {
             "10": new Card(id: 10, name: "Iorveth", attack: 10, position: "RANGED", faction: "Scoia'tael"),
             "11": new Card(id: 11, name: "Catapult", attack: 8, position: "SIEGE", faction: "Northern Realms"),
             "12": new Card(id: 12, name: "Thaler", attack: 1, position: "SIEGE", faction: "Northern Realms"),
-            "13": new Card(id: 13, name: "Fire Elemental", attack: 6, position: "SIEGE", faction: "Mosters"),
+            "13": new Card(id: 13, name: "Fire Elemental", attack: 6, position: "SIEGE", faction: "Monsters"),
             "14": new Card(id: 14, name: "Morvran Voorhis", attack: 10, position: "SIEGE", faction: "NilfGaard"),
             "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
     private Random random = new Random()
     private Bot bot = new Bot()
     private Player player = new Player()
-    private int currentRound = 0
+    private GameLogic gameLogic = new GameLogic()
+
 
     @GetMapping
     ResponseEntity getCards() {
@@ -70,7 +72,7 @@ class CardsController {
 
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
-        if (player.life <= 0 || bot.life <= 0) {
+        if (gameLogic.playerLife <= 0 || gameLogic.botLife <= 0) {
             return ResponseEntity.notFound().build()
         }
         List<BotAction> botActions = []
@@ -92,18 +94,18 @@ class CardsController {
     @GetMapping("/status")
     ResponseEntity getStatus() {
         StatusGameOutput statusOutput = new StatusGameOutput(botCards: bot.cards, playerCards: player.cards,
-                playerLife: player.life.toString(), botLife: bot.life.toString(), currentRound: currentRound,
-                playerAttack: player.attackPoints.toString(), botAttack: bot.attackPoints.toString())
+                playerLife: gameLogic.playerLife.toString(), botLife: gameLogic.botLife.toString(), currentRound: gameLogic.currentRound,
+                playerAttack: gameLogic.playerAttackPoints.toString(), botAttack: gameLogic.botAttackPoints.toString())
         return ResponseEntity.ok(statusOutput)
     }
 
 
     private void initializeGame(StartGameInput input) {
-        currentRound = 1
-        player.attackPoints = 0
-        bot.attackPoints = 0
-        player.life = 2
-        bot.life = 2
+        gameLogic.playerLife = 2
+        gameLogic.botLife = 2
+        gameLogic.currentRound = 1
+        gameLogic.playerAttackPoints = 0
+        gameLogic.botAttackPoints = 0
         bot.cards = []
         player.cards = []
         player.name = input.player.name
@@ -125,14 +127,14 @@ class CardsController {
         int index = random.nextInt(bot.cards.size())
         Card botCardPlayed = bot.cards.get(index)
         bot.cards.remove(index)
-        bot.cardsPlayed[currentRound.toString()] = bot.cardsPlayed[currentRound.toString()] + botCardPlayed
-        bot.attackPoints = bot.attackPoints + botCardPlayed.attack
+        bot.cardsPlayed[gameLogic.currentRound.toString()] = bot.cardsPlayed[gameLogic.currentRound.toString()] + botCardPlayed
+        gameLogic.botAttackPoints = gameLogic.botAttackPoints + botCardPlayed.attack
         return new BotAction(botCardPlayed: botCardPlayed)
     }
 
     private PlayGameOutput handleBotTurn(List<BotAction> botActions) {
         while (shouldBotPlay()) {
-            if (bot.attackPoints > player.attackPoints) {
+            if (gameLogic.botAttackPoints > gameLogic.botAttackPoints) {
                 break
             } else {
                 BotAction botAction = playBot()
@@ -140,52 +142,53 @@ class CardsController {
             }
         }
         startANewRound()
-        if (player.life <= 0 && bot.life <= 0) {
+        if (gameLogic.playerLife <= 0 && gameLogic.botLife <= 0) {
             String gameResult = "Empatou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
-        } else if (bot.life <= 0) {
+        } else if (gameLogic.botLife <= 0) {
             String gameResult = player.name + " ganhou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
-        } else if (player.life <= 0) {
+        } else if (gameLogic.playerLife <= 0) {
             String gameResult = "Bot ganhou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
         } else if (player.passTurn && botActions.size() > 0) {
             String gameResult = player.name + ": passou a vez. Bot: jogou a carta " +
-                    botActions.botCardPlayed.name + " e depois passou a vez. novo round =" + currentRound
+                    botActions.botCardPlayed.name + " e depois passou a vez. novo round =" + gameLogic.currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
             return playOutput
         } else {
-            String gameResult = player.name + ": passou a vez. Bot: passou a vez. Novo round atual = " + currentRound
+            String gameResult = player.name + ": passou a vez. Bot: passou a vez. Novo round atual = " + gameLogic.currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
             return playOutput
         }
     }
 
+
     private PlayGameOutput playBotTurn(Card playerCardPlayed, List<BotAction> botActions) {
-        if (player.life <= 0 && bot.life <= 0) {
+        if (gameLogic.playerLife <= 0 && gameLogic.botLife <= 0) {
             String gameResult = "Empatou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
-        } else if (bot.life <= 0) {
+        } else if (gameLogic.botLife <= 0) {
             String gameResult = player.name + " ganhou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
-        } else if (player.life <= 0) {
+        } else if (gameLogic.playerLife <= 0) {
             String gameResult = "Bot ganhou o Jogo!"
             PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
             return playOutput
         } else if (bot.passTurn) {
             String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: passou a vez." +
-                    " Round atual = " + currentRound
+                    " Round atual = " + gameLogic.currentRound
             PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
                     botActions: botActions, gameResult: gameResult)
             return playOutput
         } else {
             String gameResult = player.name + ": jogou a carta " + playerCardPlayed.name + ". Bot: jogou a carta " +
-                    botActions.botCardPlayed.name + ". Round atual = " + currentRound
+                    botActions.botCardPlayed.name + ". Round atual = " + gameLogic.currentRound
             PlayGameOutput playOutput = new PlayGameOutput(playerCardPlayed: playerCardPlayed,
                     botActions: botActions, gameResult: gameResult)
             return playOutput
@@ -193,26 +196,26 @@ class CardsController {
     }
 
     private void startANewRound() {
-        if (player.attackPoints > bot.attackPoints) {
-            bot.life = bot.life - 1
-        } else if (bot.attackPoints > player.attackPoints) {
-            player.life = player.life - 1
+        if (gameLogic.playerAttackPoints > gameLogic.botAttackPoints) {
+            gameLogic.botLife = gameLogic.botLife - 1
+        } else if (gameLogic.botAttackPoints > gameLogic.playerAttackPoints) {
+            gameLogic.playerLife = gameLogic.playerLife - 1
         } else {
-            bot.life = bot.life - 1
-            player.life = player.life - 1
+            gameLogic.botLife= gameLogic.botLife - 1
+            gameLogic.playerLife = gameLogic.playerLife - 1
         }
-        currentRound++
+        gameLogic.currentRound++
 
-        player.attackPoints = 0
-        bot.attackPoints = 0
+        gameLogic.playerAttackPoints = 0
+        gameLogic.botAttackPoints = 0
     }
 
     private boolean shouldBotPlay() {
-        if (bot.life == 1 && bot.cards.isEmpty()) {
+        if (gameLogic.botLife == 1 && bot.cards.isEmpty()) {
             return false
         } else if (bot.cards.isEmpty()) {
             return false
-        } else if (bot.life == 1) {
+        } else if (gameLogic.botLife == 1) {
             return true
         } else if (bot.passTurn) {
             return false
@@ -224,8 +227,8 @@ class CardsController {
     private PlayGameOutput handlePlayerTurn(PlayInput input, List<BotAction> botActions) {
         Card playerCardPlayed = player.cards[input.index]
         player.cards.remove(input.index)
-        player.cardsPlayed[currentRound.toString()] = player.cardsPlayed[currentRound.toString()] + playerCardPlayed
-        player.attackPoints = player.attackPoints + playerCardPlayed.attack
+        player.cardsPlayed[gameLogic.currentRound.toString()] = player.cardsPlayed[gameLogic.currentRound.toString()] + playerCardPlayed
+        gameLogic.playerAttackPoints = gameLogic.playerAttackPoints + playerCardPlayed.attack
         if (shouldBotPlay()) {
             bot.passTurn = false
             BotAction botAction = playBot()
