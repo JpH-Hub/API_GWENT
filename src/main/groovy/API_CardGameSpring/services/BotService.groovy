@@ -24,6 +24,7 @@ class BotService {
         return new BotAction(botCardPlayed: botCardPlayed)
     }
 
+
     PlayGameOutput handleBotTurn(List<BotAction> botActions) {
         while (shouldBotPlay()) {
             if (bot.attackPoints > player.attackPoints) {
