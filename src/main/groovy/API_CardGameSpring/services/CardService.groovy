@@ -1,18 +1,16 @@
 package API_CardGameSpring.services
 
-
 import API_CardGameSpring.models.Card
-import API_CardGameSpring.models.PlayInput
-import org.springframework.stereotype.Service
 
-@Service
 class CardService {
 
-    PlayerService playerService = new PlayerService()
-    BotService botService = new BotService()
-    private Random random = new Random()
+    private Random random
 
-    Map<String, Card> cards = [
+    CardService(Random random) {
+        this.random = random
+    }
+
+    private Map<String, Card> cards = [
             "1" : new Card(id: 1, name: "Cirilla", attack: 15, position: "MELEE", faction: "neutral"),
             "2" : new Card(id: 2, name: "Gerald", attack: 15, position: "MELEE", faction: "neutral"),
             "3" : new Card(id: 3, name: "Triss", attack: 7, position: "MELEE", faction: "neutral"),
@@ -27,17 +25,21 @@ class CardService {
             "12": new Card(id: 12, name: "Thaler", attack: 1, position: "SIEGE", faction: "Northern Realms"),
             "13": new Card(id: 13, name: "Fire Elemental", attack: 6, position: "SIEGE", faction: "Monsters"),
             "14": new Card(id: 14, name: "Morvran Voorhis", attack: 10, position: "SIEGE", faction: "NilfGaard"),
-            "15": new Card(id: 15, name: "Gaunter O'Dimm", attack: 2, position: "SIEGE", faction: "Neutral")
+            "15": new Card(id: 15, name: "Gaunter O'Dim", attack: 2, position: "SIEGE", faction: "Neutral")
     ]
 
-    void giveRandomCards() {
+    Map<String, Card> getCards() {
+        return cards
+    }
+
+    List<Card> giveRandomCards() {
+        List<Card> randomCards = []
         for (int i = 0; i < 5; i++) {
             int id
             id = random.nextInt(cards.size()) + 1
-            playerService.player.cards.add(cards.get(id.toString()))
-            id = random.nextInt(cards.size()) + 1
-            botService.bot.cards.add(cards.get(id.toString()))
+            randomCards.add(cards.get(id.toString()))
         }
+        return randomCards
     }
 
 }

@@ -5,45 +5,47 @@ import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Card
 import API_CardGameSpring.models.PlayGameOutput
 import API_CardGameSpring.models.Player
-import org.springframework.stereotype.Service
 
-@Service
+
 class BotService {
 
-    private Player player = new Player()
-    LogicGameService logicGameService = new LogicGameService()
-    private Random random = new Random()
-    Bot bot = new Bot()
+    private Bot bot
+    private Random random
 
-    BotAction playBot() {
+    BotService(Random random) {
+        this.random = random
+        this.bot = new Bot()
+    }
+
+    BotAction playBot(Integer currentRound) {
         int index = random.nextInt(bot.cards.size())
         Card botCardPlayed = bot.cards.get(index)
         bot.cards.remove(index)
-        bot.cardsPlayed[logicGameService.currentRound.toString()] = bot.cardsPlayed[logicGameService.currentRound.toString()] + botCardPlayed
+        bot.cardsPlayed[currentRound.toString()] = bot.cardsPlayed[currentRound.toString()] + botCardPlayed
         bot.attackPoints = bot.attackPoints + botCardPlayed.attack
         return new BotAction(botCardPlayed: botCardPlayed)
     }
 
 
-    PlayGameOutput handleBotTurn(List<BotAction> botActions) {
+    PlayGameOutput handleBotTurn(List<BotAction> botActions, Player player, Integer currentRound) {
         while (shouldBotPlay()) {
             if (bot.attackPoints > player.attackPoints) {
                 break
             } else {
-                BotAction botAction = playBot()
+                BotAction botAction = playBot(currentRound)
                 botActions.add(botAction)
             }
         }
-        logicGameService.startANewRound()
-        if (logicGameService.currentRound > 3) {
-            logicGameService.setWinner()
+        startANewRound()
+        if (currentRound > 3) {
+            setWinner()
         } else if (player.passTurn && botActions.size() > 0) {
             String gameResult = player.name + ": passou a vez. Bot: jogou a carta " +
-                    botActions.botCardPlayed.name + " e depois passou a vez. novo round =" + logicGameService.currentRound
+                    botActions.botCardPlayed.name + " e depois passou a vez. novo round =" + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
             return playOutput
         } else {
-            String gameResult = player.name + ": passou a vez. Bot: passou a vez. Novo round atual = " + logicGameService.currentRound
+            String gameResult = player.name + ": passou a vez. Bot: passou a vez. Novo round atual = " + currentRound
             PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
             return playOutput
         }
