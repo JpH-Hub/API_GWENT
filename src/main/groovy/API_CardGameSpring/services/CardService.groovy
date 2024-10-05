@@ -32,6 +32,10 @@ class CardService {
         return cards
     }
 
+    void addCards(Card card) {
+        cards.put(card.id.toString(), card)
+    }
+
     List<Card> giveRandomCards() {
         List<Card> randomCards = []
         for (int i = 0; i < 5; i++) {
