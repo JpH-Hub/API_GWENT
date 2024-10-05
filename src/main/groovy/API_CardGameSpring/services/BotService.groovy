@@ -3,65 +3,66 @@ package API_CardGameSpring.services
 import API_CardGameSpring.models.Bot
 import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Card
-import API_CardGameSpring.models.PlayGameOutput
-import API_CardGameSpring.models.Player
-
 
 class BotService {
 
     private Bot bot
     private Random random
+    private CardService cardService
 
-    BotService(Random random) {
-        this.random = random
+    BotService(Random random, CardService cardService) {
         this.bot = new Bot()
+        this.random = random
+        this.cardService = cardService
     }
 
-    BotAction playBot(Integer currentRound) {
-        int index = random.nextInt(bot.cards.size())
-        Card botCardPlayed = bot.cards.get(index)
-        bot.cards.remove(index)
-        bot.cardsPlayed[currentRound.toString()] = bot.cardsPlayed[currentRound.toString()] + botCardPlayed
-        bot.attackPoints = bot.attackPoints + botCardPlayed.attack
-        return new BotAction(botCardPlayed: botCardPlayed)
+    Integer getLife(){
+        return bot.life
     }
 
+    Integer getAttackPoints(){
+        return bot.attackPoints
+    }
 
-    PlayGameOutput handleBotTurn(List<BotAction> botActions, Player player, Integer currentRound) {
-        while (shouldBotPlay()) {
-            if (bot.attackPoints > player.attackPoints) {
-                break
-            } else {
-                BotAction botAction = playBot(currentRound)
-                botActions.add(botAction)
-            }
-        }
-        startANewRound()
-        if (currentRound > 3) {
-            setWinner()
-        } else if (player.passTurn && botActions.size() > 0) {
-            String gameResult = player.name + ": passou a vez. Bot: jogou a carta " +
-                    botActions.botCardPlayed.name + " e depois passou a vez. novo round =" + currentRound
-            PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
-            return playOutput
+    void resetAttackPoints(){
+        bot.attackPoints = 0
+    }
+
+    void kill(){
+        bot.life = bot.life - 1
+    }
+
+    BotAction throwCard(Integer currentRound, Integer playerAttackPoints) {
+        if (!shouldPassTurn(playerAttackPoints)) {
+            int index = random.nextInt(bot.cards.size())
+            Card botCardPlayed = bot.cards.get(index)
+            bot.cards.remove(index)
+            bot.cardsPlayed[currentRound.toString()] = bot.cardsPlayed[currentRound.toString()] + botCardPlayed
+            bot.attackPoints = bot.attackPoints + botCardPlayed.attack
+            return new BotAction(botCardPlayed: botCardPlayed, passTurn: bot.passTurn)
         } else {
-            String gameResult = player.name + ": passou a vez. Bot: passou a vez. Novo round atual = " + currentRound
-            PlayGameOutput playOutput = new PlayGameOutput(botActions: botActions, gameResult: gameResult)
-            return playOutput
+            return new BotAction(passTurn: bot.passTurn)
         }
     }
 
-    boolean shouldBotPlay() {
-        if (bot.life == 1 && bot.cards.isEmpty()) {
-            return false
-        } else if (bot.cards.isEmpty()) {
-            return false
+
+    List<BotAction> handleBotTurn(Integer playerAttackPoints, Integer currentRound) {
+        List<BotAction> botActions = []
+        do {
+            BotAction botAction = throwCard(currentRound, playerAttackPoints)
+            botActions.add(botAction)
+        } while (!botActions.last().passTurn)
+        return botActions
+    }
+
+    private boolean shouldPassTurn(Integer playerAttackPoints) {
+        if (bot.cards.isEmpty() || (bot.attackPoints > playerAttackPoints)) {
+            bot.passTurn = true
         } else if (bot.life == 1) {
-            return true
-        } else if (bot.passTurn) {
-            return false
+            bot.passTurn = false
         }
-        return random.nextBoolean()
+        bot.passTurn = random.nextBoolean()
+        return bot.passTurn
     }
 
 }

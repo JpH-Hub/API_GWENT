@@ -1,4 +1,5 @@
 package API_CardGameSpring.controller
+
 import API_CardGameSpring.models.*
 import API_CardGameSpring.services.BotService
 import API_CardGameSpring.services.CardService
@@ -14,27 +15,32 @@ class CardsController {
     //TODO -> Utilizar PROGRAMAÇÃO ORIENTADA A OBJETOS
     //TODO -> Utilizar MVC
     //Todo -> Utilizar IoC e DI
-
-    private Player player = new Player()
-    private Bot bot = new Bot()
-    private Integer currentRound = 0
     private Random random = new Random()
+    private Integer currentRound = 0
+    private boolean faceOrCrownWin
     private CardService cardService = new CardService(random)
-    private BotService botService = new BotService(random)
-    private PlayerService playerService = new PlayerService()
+    private BotService botService = new BotService(random, cardService)
+    private PlayerService playerService = new PlayerService(cardService)
+//      @TODO injetar dependencias usando @Configuration e @Bean
+//    CardsController(Random random, CardService cardService, BotService botService, PlayerService playerService) {
+//        this.random = random
+//        this.cardService = cardService
+//        this.botService = botService
+//        this.playerService = playerService
+//    }
 
     @GetMapping
     ResponseEntity getCards() {
         return ResponseEntity.ok(cardService.cards.values().toList())
     }
 
-    @PostMapping("add-cards")
+    @PostMapping("card")
     ResponseEntity createCard(@RequestBody Card newCard) {
         Card card = cardService.cards[newCard.id]
         if (card != null) {
             return ResponseEntity.status(409).build()
         }
-        cardService.cards.put(newCard.id.toString(), newCard)
+        cardService.addCards(card)
         return ResponseEntity.noContent().build()
     }
 
@@ -43,8 +49,9 @@ class CardsController {
         initializeGame(input)
         BotAction botAction = new BotAction()
         boolean faceOrCrownResult = random.nextBoolean()
-        if (input.faceOrCrown != faceOrCrownResult) {
-            botAction = botService.playBot()
+        faceOrCrownWin = input.faceOrCrown == faceOrCrownResult
+        if (!faceOrCrownWin) {
+            botAction = botService.throwCard(currentRound, playerService.getAttackPoints())
         }
         StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
         return ResponseEntity.ok(output)
@@ -62,23 +69,37 @@ class CardsController {
 
     @PostMapping("/play")
     ResponseEntity play(@RequestBody PlayInput input) {
-        if (player.life <= 0 || bot.life <= 0) {
+        List<BotAction> botActions = []
+        Card playedCard = null
+        String gameResult = ""
+        if (playerService.getLife() <= 0 || botService.getLife() <= 0) {
             return ResponseEntity.notFound().build()
         }
-        List<BotAction> botActions = []
-        player.passTurn = input.passTurn
-        if (player.cards.isEmpty()) {
-            player.passTurn = true
-        }
-        if (!player.passTurn) {
+        if (!playerService.shouldPassTurn(input)) {
             if (playerService.checkCardIdIsValid(input)) {
-                return ResponseEntity.badRequest().build()
+                playedCard = playerService.throwCard(input, currentRound)
+                gameResult = "${playerService.getName()}: jogou a carta ${playedCard.name} "
+                BotAction botAction = botService.throwCard(currentRound, playerService.getAttackPoints())
+                gameResult = """
+                        ${gameResult} ${botAction.passTurn ?
+                        ". Bot: passou a vez." 
+                        : ". Bot: jogou a carta ${botAction.botCardPlayed.name}"}
+                         . Round atual = ${currentRound}
+                """
+                botActions.add(botAction)
             } else {
-                return ResponseEntity.ok(playerService.handlePlayerTurn(input, botActions))
+                return ResponseEntity.badRequest().build()
             }
         } else {
-            return ResponseEntity.ok(botService.handleBotTurn(botActions))
+            botActions = botService.handleBotTurn(playerService.getAttackPoints(), currentRound)
+            gameResult = """${playerService.getName()}""" //@TODO pensar em um jeito bom de mostrar as varias cartas
         }
+        if (currentRound < 3) {
+            startANewRound()
+        } else {
+            gameResult = getWinner()
+        }
+        return ResponseEntity.ok(new PlayGameOutput(botActions: botActions, playerCardPlayed: playedCard, gameResult: gameResult))
     }
 
     @GetMapping("/status")
@@ -90,9 +111,11 @@ class CardsController {
     }
 
     private void initializeGame(StartGameInput input) {
+        currentRound = 1
+
+        //@TODO implementar métodos reset player  e reset bot dentro dos seus respectivos services,
         input.player.life = 2
         bot.life = 2
-        currentRound = 1
         player.attackPoints = 0
         bot.attackPoints = 0
         bot.cards = cardService.giveRandomCards()
@@ -102,32 +125,27 @@ class CardsController {
     }
 
     private void startANewRound() {
-        if (player.attackPoints > bot.attackPoints) {
-            bot.life = bot.life - 1
-        } else if (bot.attackPoints > player.attackPoints) {
-            player.life = player.life - 1
-        } else {
-            bot.life = bot.life - 1
-            player.life = player.life - 1
-        }
         currentRound++
-        player.attackPoints = 0
-        bot.attackPoints = 0
+        if (playerService.getAttackPoints() > botService.getAttackPoints()) {
+            botService.kill()
+        } else if (playerService.getAttackPoints() < botService.getAttackPoints()) {
+            playerService.kill()
+        } else {
+            botService.kill()
+            playerService.kill()
+        }
+        playerService.resetAttackPoints()
+        botService.resetAttackPoints()
     }
 
-    private PlayGameOutput setWinner() {
-        if (player.life <= 0 && bot.life <= 0 ) {
-            String gameResult = "Empatou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
-        } else if (bot.life <= 0 ) {
-            String gameResult = player.name + " ganhou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
+    private String getWinner() {
+        if (playerService.getLife() <= 0 && botService.getLife() <= 0) {
+            return "Empatou o Jogo!"
+        } else if (bot.life <= 0) {
+            //@TODO fazer getName
+            return playerService.getName() + " ganhou o Jogo!"
         } else {
-            String gameResult = "Bot ganhou o Jogo!"
-            PlayGameOutput playOutput = new PlayGameOutput(gameResult: gameResult)
-            return playOutput
+            return "Bot ganhou o Jogo!"
         }
     }
 
