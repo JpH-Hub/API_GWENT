@@ -1,9 +1,8 @@
 package API_CardGameSpring.services
-
-
 import API_CardGameSpring.models.Card
 import API_CardGameSpring.models.PlayInput
 import API_CardGameSpring.models.Player
+import API_CardGameSpring.models.StartGameInput
 
 class PlayerService {
 
@@ -13,6 +12,14 @@ class PlayerService {
     PlayerService(CardService cardService) {
         this.player = new Player()
         this.cardService = cardService
+    }
+
+    List<Card> getCards() {
+        return player.cards
+    }
+
+    String getName() {
+        return player.name
     }
 
     Integer getLife(){
@@ -54,5 +61,11 @@ class PlayerService {
         return player.attackPoints
     }
 
+    void resetPlayerAttributes(StartGameInput input) {
+        player.life = 2
+        player.attackPoints = 0
+        player.cards = cardService.giveRandomCards()
+        player.name = input.player.name
+    }
 
 }

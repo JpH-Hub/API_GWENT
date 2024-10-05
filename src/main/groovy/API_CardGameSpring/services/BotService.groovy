@@ -16,6 +16,10 @@ class BotService {
         this.cardService = cardService
     }
 
+    List<Card> getCards() {
+        return bot.cards
+    }
+
     Integer getLife(){
         return bot.life
     }
@@ -45,7 +49,6 @@ class BotService {
         }
     }
 
-
     List<BotAction> handleBotTurn(Integer playerAttackPoints, Integer currentRound) {
         List<BotAction> botActions = []
         do {
@@ -56,13 +59,24 @@ class BotService {
     }
 
     private boolean shouldPassTurn(Integer playerAttackPoints) {
+        if (bot.passTurn) {
+            return true
+        }
         if (bot.cards.isEmpty() || (bot.attackPoints > playerAttackPoints)) {
             bot.passTurn = true
+            return bot.passTurn
         } else if (bot.life == 1) {
             bot.passTurn = false
+            return bot.passTurn
         }
         bot.passTurn = random.nextBoolean()
         return bot.passTurn
     }
 
+    void resetBotAttributes() {
+        bot.life = 2
+        bot.attackPoints = 0
+        bot.cards = cardService.giveRandomCards()
+        bot.cardsPlayed = ["1": [], "2": [], "3": []]
+    }
 }

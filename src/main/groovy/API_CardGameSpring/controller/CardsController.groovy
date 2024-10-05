@@ -3,7 +3,6 @@ package API_CardGameSpring.controller
 import API_CardGameSpring.models.*
 import API_CardGameSpring.services.BotService
 import API_CardGameSpring.services.CardService
-
 import API_CardGameSpring.services.PlayerService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -11,13 +10,8 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/cards")
 class CardsController {
-    //Todo -> Arruma os efeitos colaterais
-    //TODO -> Utilizar PROGRAMAÇÃO ORIENTADA A OBJETOS
-    //TODO -> Utilizar MVC
-    //Todo -> Utilizar IoC e DI
     private Random random = new Random()
     private Integer currentRound = 0
-    private boolean faceOrCrownWin
     private CardService cardService = new CardService(random)
     private BotService botService = new BotService(random, cardService)
     private PlayerService playerService = new PlayerService(cardService)
@@ -36,11 +30,11 @@ class CardsController {
 
     @PostMapping("card")
     ResponseEntity createCard(@RequestBody Card newCard) {
-        Card card = cardService.cards[newCard.id]
+        Card card = cardService.cards[newCard.id.toString()]
         if (card != null) {
             return ResponseEntity.status(409).build()
         }
-        cardService.addCards(card)
+        cardService.addCards(newCard)
         return ResponseEntity.noContent().build()
     }
 
@@ -49,8 +43,7 @@ class CardsController {
         initializeGame(input)
         BotAction botAction = new BotAction()
         boolean faceOrCrownResult = random.nextBoolean()
-        faceOrCrownWin = input.faceOrCrown == faceOrCrownResult
-        if (!faceOrCrownWin) {
+        if (input.faceOrCrown != faceOrCrownResult) {
             botAction = botService.throwCard(currentRound, playerService.getAttackPoints())
         }
         StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
@@ -59,12 +52,12 @@ class CardsController {
 
     @GetMapping("/player_cards")
     ResponseEntity getPlayerCards() {
-        return ResponseEntity.ok(player.cards)
+        return ResponseEntity.ok(playerService.getCards())
     }
 
     @GetMapping("/bot_cards")
     ResponseEntity getBotCards() {
-        return ResponseEntity.ok(bot.cards)
+        return ResponseEntity.ok(botService.getCards())
     }
 
     @PostMapping("/play")
@@ -82,9 +75,9 @@ class CardsController {
                 BotAction botAction = botService.throwCard(currentRound, playerService.getAttackPoints())
                 gameResult = """
                         ${gameResult} ${botAction.passTurn ?
-                        ". Bot: passou a vez." 
+                        ". Bot: passou a vez."
                         : ". Bot: jogou a carta ${botAction.botCardPlayed.name}"}
-                         . Round atual = ${currentRound}
+                        .Round atual = ${currentRound}
                 """
                 botActions.add(botAction)
             } else {
@@ -92,11 +85,15 @@ class CardsController {
             }
         } else {
             botActions = botService.handleBotTurn(playerService.getAttackPoints(), currentRound)
-            gameResult = """${playerService.getName()}""" //@TODO pensar em um jeito bom de mostrar as varias cartas
+            gameResult = """
+            ${botActions.passTurn} ? "${playerService.getName()}: passou a vez. Bot: passou a vez. Novo round = ${currentRound}" :
+            "${playerService.getName()}: passou a vez. Bot: jogou a carta ${botActions.botCardPlayed.name}"
+            e depois passou a vez. Novo round = ${currentRound}
+            """
         }
-        if (currentRound < 3) {
+        if (botActions.passTurn && input.passTurn && currentRound < 3) {
             startANewRound()
-        } else {
+        } else if (currentRound > 3) {
             gameResult = getWinner()
         }
         return ResponseEntity.ok(new PlayGameOutput(botActions: botActions, playerCardPlayed: playedCard, gameResult: gameResult))
@@ -104,24 +101,16 @@ class CardsController {
 
     @GetMapping("/status")
     ResponseEntity getStatus() {
-        StatusGameOutput statusOutput = new StatusGameOutput(botCards: bot.cards, playerCards: player.cards,
-                playerLife: player.life.toString(), botLife: bot.life.toString(), currentRound: currentRound,
-                playerAttack: player.attackPoints.toString(), botAttack: bot.attackPoints.toString())
+        StatusGameOutput statusOutput = new StatusGameOutput(botCards: botService.getCards(), playerCards: playerService.getCards(),
+                playerLife: playerService.getLife().toString(), botLife: botService.getLife().toString(), currentRound: currentRound,
+                playerAttack: playerService.getAttackPoints().toString(), botAttack: botService.getAttackPoints().toString())
         return ResponseEntity.ok(statusOutput)
     }
 
     private void initializeGame(StartGameInput input) {
         currentRound = 1
-
-        //@TODO implementar métodos reset player  e reset bot dentro dos seus respectivos services,
-        input.player.life = 2
-        bot.life = 2
-        player.attackPoints = 0
-        bot.attackPoints = 0
-        bot.cards = cardService.giveRandomCards()
-        player.cards = cardService.giveRandomCards()
-        player.name = input.player.name
-        bot.cardsPlayed = ["1": [], "2": [], "3": []]
+        playerService.resetPlayerAttributes(input)
+        botService.resetBotAttributes()
     }
 
     private void startANewRound() {
@@ -141,7 +130,7 @@ class CardsController {
     private String getWinner() {
         if (playerService.getLife() <= 0 && botService.getLife() <= 0) {
             return "Empatou o Jogo!"
-        } else if (bot.life <= 0) {
+        } else if (botService.getLife() <= 0) {
             //@TODO fazer getName
             return playerService.getName() + " ganhou o Jogo!"
         } else {
