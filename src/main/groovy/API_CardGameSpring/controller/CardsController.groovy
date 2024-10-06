@@ -46,7 +46,7 @@ class CardsController {
         BotAction botAction = new BotAction()
         boolean faceOrCrownResult = random.nextBoolean()
         if (input.faceOrCrown != faceOrCrownResult) {
-            botAction = botService.throwCard(currentRound, playerService.getAttackPoints())
+            botAction = botService.throwCard(currentRound, playerService.getAttackPoints(), botAction)
         }
         StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
         return ResponseEntity.ok(output)
@@ -74,7 +74,7 @@ class CardsController {
             if (playerService.checkCardIdIsValid(input)) {
                 playedCard = playerService.throwCard(input, currentRound)
                 gameResult = "${playerService.getName()}: jogou a carta ${playedCard.name} "
-                BotAction botAction = botService.throwCard(currentRound, playerService.getAttackPoints())
+                BotAction botAction = botService.throwCard(currentRound, playerService.getAttackPoints(), botActions )
                 gameResult = """
                         ${gameResult} ${botAction.passTurn ?
                         ". Bot: passou a vez."

@@ -40,17 +40,16 @@ class BotService {
         bot.life = bot.life - 1
     }
 
-    BotAction throwCard(Integer currentRound, Integer playerAttackPoints) {
-        if (!shouldPassTurn(playerAttackPoints)) {
+    BotAction throwCard(Integer currentRound, Integer playerAttackPoints, List<BotAction> botAction) {
+        if (!shouldPassTurn(playerAttackPoints, botAction)) {
             int index = random.nextInt(bot.cards.size())
             Card botCardPlayed = bot.cards.get(index)
             bot.cards.remove(index)
             bot.cardsPlayed[currentRound.toString()] = bot.cardsPlayed[currentRound.toString()] + botCardPlayed
             bot.attackPoints = bot.attackPoints + botCardPlayed.attack
-            return new BotAction(botCardPlayed: botCardPlayed, passTurn: bot.passTurn)
-        } else {
-            return new BotAction(passTurn: bot.passTurn)
+            return new BotAction(botCardPlayed: botCardPlayed)
         }
+        return new BotAction(passTurn: botAction.passTurn)
     }
 
     List<BotAction> handleBotTurn(Integer playerAttackPoints, Integer currentRound) {
@@ -62,19 +61,19 @@ class BotService {
         return botActions
     }
 
-    private boolean shouldPassTurn(Integer playerAttackPoints) {
-        if (bot.passTurn) {
+    private boolean shouldPassTurn(Integer playerAttackPoints, BotAction botAction) {
+        if (botAction.passTurn) {
             return true
         }
         if (bot.cards.isEmpty() || (bot.attackPoints > playerAttackPoints)) {
-            bot.passTurn = true
-            return bot.passTurn
+            botAction.passTurn = true
+            return botAction.passTurn
         } else if (bot.life == 1) {
-            bot.passTurn = false
-            return bot.passTurn
+            botAction.passTurn = false
+            return botAction.passTurn
         }
-        bot.passTurn = random.nextBoolean()
-        return bot.passTurn
+        botAction.passTurn = random.nextBoolean()
+        return botAction.passTurn
     }
 
     void resetBotAttributes() {
