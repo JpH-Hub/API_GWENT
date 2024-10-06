@@ -3,13 +3,17 @@ package API_CardGameSpring.services
 import API_CardGameSpring.models.Bot
 import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Card
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Service
 
+@Service
 class BotService {
 
     private Bot bot
     private Random random
     private CardService cardService
 
+    @Autowired
     BotService(Random random, CardService cardService) {
         this.bot = new Bot()
         this.random = random

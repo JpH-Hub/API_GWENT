@@ -4,24 +4,26 @@ import API_CardGameSpring.models.*
 import API_CardGameSpring.services.BotService
 import API_CardGameSpring.services.CardService
 import API_CardGameSpring.services.PlayerService
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/cards")
 class CardsController {
-    private Random random = new Random()
+    private Random random
     private Integer currentRound = 0
-    private CardService cardService = new CardService(random)
-    private BotService botService = new BotService(random, cardService)
-    private PlayerService playerService = new PlayerService(cardService)
+    private CardService cardService
+    private BotService botService
+    private PlayerService playerService
 //      @TODO injetar dependencias usando @Configuration e @Bean
-//    CardsController(Random random, CardService cardService, BotService botService, PlayerService playerService) {
-//        this.random = random
-//        this.cardService = cardService
-//        this.botService = botService
-//        this.playerService = playerService
-//    }
+    @Autowired
+    CardsController(Random random, CardService cardService, BotService botService, PlayerService playerService) {
+        this.random = random
+        this.cardService = cardService
+        this.botService = botService
+        this.playerService = playerService
+    }
 
     @GetMapping
     ResponseEntity getCards() {

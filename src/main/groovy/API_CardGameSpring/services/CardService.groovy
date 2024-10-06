@@ -1,11 +1,15 @@
 package API_CardGameSpring.services
 
 import API_CardGameSpring.models.Card
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Service
 
+@Service
 class CardService {
 
     private Random random
 
+    @Autowired
     CardService(Random random) {
         this.random = random
     }
