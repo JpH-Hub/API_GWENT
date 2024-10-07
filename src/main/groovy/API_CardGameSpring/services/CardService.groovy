@@ -9,7 +9,6 @@ class CardService {
 
     private Random random
 
-    @Autowired
     CardService(Random random) {
         this.random = random
     }

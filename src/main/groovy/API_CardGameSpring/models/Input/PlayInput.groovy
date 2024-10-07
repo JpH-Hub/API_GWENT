@@ -1,4 +1,4 @@
-package API_CardGameSpring.models
+package API_CardGameSpring.models.Input
 
 class PlayInput {
     Integer cardId

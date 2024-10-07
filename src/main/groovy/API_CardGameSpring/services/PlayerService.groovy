@@ -1,9 +1,8 @@
 package API_CardGameSpring.services
 import API_CardGameSpring.models.Card
-import API_CardGameSpring.models.PlayInput
+import API_CardGameSpring.models.Input.PlayInput
 import API_CardGameSpring.models.Player
-import API_CardGameSpring.models.StartGameInput
-import org.springframework.beans.factory.annotation.Autowired
+import API_CardGameSpring.models.Input.StartGameInput
 import org.springframework.stereotype.Service
 
 @Service
@@ -12,7 +11,6 @@ class PlayerService {
     private Player player
     private CardService cardService
 
-    @Autowired
     PlayerService(CardService cardService) {
         this.player = new Player()
         this.cardService = cardService
@@ -34,7 +32,7 @@ class PlayerService {
         player.attackPoints = 0
     }
 
-    void kill(){
+    void loseLife(){
         player.life = player.life - 1
     }
 

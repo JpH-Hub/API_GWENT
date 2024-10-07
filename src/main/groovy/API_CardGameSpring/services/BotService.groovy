@@ -1,21 +1,18 @@
 package API_CardGameSpring.services
-
-import API_CardGameSpring.models.Bot
 import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Card
-import org.springframework.beans.factory.annotation.Autowired
+import API_CardGameSpring.models.Character
 import org.springframework.stereotype.Service
 
 @Service
 class BotService {
 
-    private Bot bot
+    private Character bot
     private Random random
     private CardService cardService
 
-    @Autowired
     BotService(Random random, CardService cardService) {
-        this.bot = new Bot()
+        this.bot = new Character()
         this.random = random
         this.cardService = cardService
     }
@@ -24,55 +21,56 @@ class BotService {
         return bot.cards
     }
 
-    Integer getLife(){
+    Integer getLife() {
         return bot.life
     }
 
-    Integer getAttackPoints(){
+    Integer getAttackPoints() {
         return bot.attackPoints
     }
 
-    void resetAttackPoints(){
+    void resetAttackPoints() {
         bot.attackPoints = 0
     }
 
-    void kill(){
+    void loseLife() {
         bot.life = bot.life - 1
     }
 
-    BotAction throwCard(Integer currentRound, Integer playerAttackPoints, List<BotAction> botAction) {
-        if (!shouldPassTurn(playerAttackPoints, botAction)) {
-            int index = random.nextInt(bot.cards.size())
-            Card botCardPlayed = bot.cards.get(index)
-            bot.cards.remove(index)
-            bot.cardsPlayed[currentRound.toString()] = bot.cardsPlayed[currentRound.toString()] + botCardPlayed
-            bot.attackPoints = bot.attackPoints + botCardPlayed.attack
-            return new BotAction(botCardPlayed: botCardPlayed)
-        }
-        return new BotAction(passTurn: botAction.passTurn)
+    Character getBot() {
+        return bot
     }
 
-    List<BotAction> handleBotTurn(Integer playerAttackPoints, Integer currentRound) {
-        List<BotAction> botActions = []
-        do {
-            BotAction botAction = throwCard(currentRound, playerAttackPoints)
-            botActions.add(botAction)
-        } while (!botActions.last().passTurn)
-        return botActions
+    BotAction throwCard(Integer currentRound) {
+        int index = random.nextInt(bot.cards.size())
+        Card botCardPlayed = bot.cards.get(index)
+        bot.cards.remove(index)
+        bot.cardsPlayed[currentRound.toString()] = bot.cardsPlayed[currentRound.toString()] + botCardPlayed
+        bot.attackPoints = bot.attackPoints + botCardPlayed.attack
+        return new BotAction(botCardPlayed: botCardPlayed)
     }
 
-    private boolean shouldPassTurn(Integer playerAttackPoints, BotAction botAction) {
-        if (botAction.passTurn) {
+    BotAction handleBotTurn(Integer currentRound, BotAction botAction) {
+        botAction = throwCard(currentRound)
+        bot.passTurn = true
+        return botAction
+    }
+
+    boolean shouldPassTurn(BotAction botAction) {
+        if (bot.passTurn) {
             return true
         }
-        if (bot.cards.isEmpty() || (bot.attackPoints > playerAttackPoints)) {
-            botAction.passTurn = true
+        if (bot.cards.isEmpty()) {
+            bot.passTurn = true
+            botAction.passTurn = bot.passTurn
             return botAction.passTurn
         } else if (bot.life == 1) {
-            botAction.passTurn = false
+            bot.passTurn = false
+            botAction.passTurn = bot.passTurn
             return botAction.passTurn
         }
-        botAction.passTurn = random.nextBoolean()
+        bot.passTurn = random.nextBoolean()
+        botAction.passTurn = bot.passTurn
         return botAction.passTurn
     }
 
@@ -81,5 +79,6 @@ class BotService {
         bot.attackPoints = 0
         bot.cards = cardService.giveRandomCards()
         bot.cardsPlayed = ["1": [], "2": [], "3": []]
+        bot.passTurn = false
     }
 }

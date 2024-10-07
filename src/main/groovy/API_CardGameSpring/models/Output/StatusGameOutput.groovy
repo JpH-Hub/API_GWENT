@@ -1,4 +1,6 @@
-package API_CardGameSpring.models
+package API_CardGameSpring.models.Output
+
+import API_CardGameSpring.models.Card
 
 class StatusGameOutput {
     List<Card> botCards
