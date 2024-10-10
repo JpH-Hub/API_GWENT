@@ -10,23 +10,23 @@ import org.springframework.context.annotation.Configuration
 class GwentConfig {
 
     @Bean
-    CardsController cardsController(){
-        return new CardsController(random(), cardService(), botService(), playerService())
+    CardsController cardsController(Random random, CardService cardService, BotService botService, PlayerService playerService){
+        return new CardsController(random, cardService, botService, playerService)
     }
 
     @Bean
-    BotService botService() {
-        return new BotService(random(), cardService())
+    BotService botService(Random random, CardService cardService) {
+        return new BotService(random, cardService)
     }
 
     @Bean
-    PlayerService playerService() {
-        return new PlayerService(cardService())
+    PlayerService playerService(CardService cardService) {
+        return new PlayerService(cardService)
     }
 
     @Bean
-    CardService cardService() {
-        return new CardService(random())
+    CardService cardService(Random random) {
+        return new CardService(random)
     }
 
     @Bean

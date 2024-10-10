@@ -1,4 +1,5 @@
 package API_CardGameSpring.controller
+
 import API_CardGameSpring.models.*
 import API_CardGameSpring.models.Input.PlayInput
 import API_CardGameSpring.models.Input.StartGameInput
@@ -10,7 +11,19 @@ import API_CardGameSpring.services.CardService
 import API_CardGameSpring.services.PlayerService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+//TODO REALIZAR ISSO PRIMEIRO: Criar uma service, chamada GameService e com isso reduzir a logica da controller.
 
+
+//TODO fazer com que o gwent possa suportar mais de uma partida.
+
+
+//TODO fazer alguma forma com que podemos jogar player contra player.
+
+
+//TODO ter uma rota que retorne uma imagem.
+
+
+//se quisermos podemos usar banco de dados.
 @RestController
 @RequestMapping("/cards")
 class CardsController {
@@ -93,9 +106,9 @@ class CardsController {
                 gameResult = "${playerService.getName()}: passou a vez. Bot: jogou a carta ${botAction.botCardPlayed.name}"
             }
         }
-        if (botService.bot.passTurn && playerService.shouldPassTurn(input) && currentRound <= 3) {
+        if (botService.getPassTurn() && playerService.shouldPassTurn(input) && currentRound <= 3) {
             startANewRound()
-            botService.bot.passTurn = false
+            botService.resetPassTurn()
         }
         gameResult = "${gameResult}. Round atual = ${currentRound}"
         if (playerService.life <= 0 || botService.life <= 0 || currentRound > 3) {
