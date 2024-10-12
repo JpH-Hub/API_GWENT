@@ -2,6 +2,7 @@ package API_CardGameSpring.Configuration
 import API_CardGameSpring.controller.CardsController
 import API_CardGameSpring.services.BotService
 import API_CardGameSpring.services.CardService
+import API_CardGameSpring.services.GameService
 import API_CardGameSpring.services.PlayerService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -10,8 +11,8 @@ import org.springframework.context.annotation.Configuration
 class GwentConfig {
 
     @Bean
-    CardsController cardsController(Random random, CardService cardService, BotService botService, PlayerService playerService){
-        return new CardsController(random, cardService, botService, playerService)
+    CardsController cardsController(CardService cardService, BotService botService, PlayerService playerService, GameService gameService){
+        return new CardsController (cardService, botService, playerService, gameService)
     }
 
     @Bean
@@ -32,5 +33,9 @@ class GwentConfig {
     @Bean
     Random random() {
         return new Random()
+    }
+    @Bean
+    GameService gameService(BotService botService, PlayerService playerService, Random random){
+        return new GameService(botService, playerService, random)
     }
 }
