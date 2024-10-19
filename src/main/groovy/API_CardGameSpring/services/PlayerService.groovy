@@ -1,5 +1,6 @@
 package API_CardGameSpring.services
 import API_CardGameSpring.models.Card
+import API_CardGameSpring.models.Game
 import API_CardGameSpring.models.Input.PlayInput
 import API_CardGameSpring.models.Player
 import API_CardGameSpring.models.Input.StartGameInput
@@ -63,11 +64,11 @@ class PlayerService {
         return player.attackPoints
     }
 
-    void resetPlayerAttributes(StartGameInput input) {
-        player.life = 2
-        player.attackPoints = 0
-        player.cards = cardService.giveRandomCards()
-        player.name = input.player.name
+    void resetPlayerAttributes(Game game) {
+        game.player.life = 2
+        game.player.attackPoints = 0
+        game.player.cardsPlayed = ["1": [], "2": [], "3": []]
+        game.player.cards = cardService.giveRandomCards()
     }
 
 }

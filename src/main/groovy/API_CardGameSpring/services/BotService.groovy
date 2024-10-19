@@ -3,6 +3,7 @@ package API_CardGameSpring.services
 import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Card
 import API_CardGameSpring.models.Character
+import API_CardGameSpring.models.Game
 import org.springframework.stereotype.Service
 
 @Service
@@ -84,11 +85,11 @@ class BotService {
         return botAction.passTurn
     }
 
-    void resetBotAttributes() {
-        bot.life = 2
-        bot.attackPoints = 0
-        bot.cards = cardService.giveRandomCards()
-        bot.cardsPlayed = ["1": [], "2": [], "3": []]
-        bot.passTurn = false
+    void resetBotAttributes(Game game) {
+        game.bot.life = 2
+        game.bot.attackPoints = 0
+        game.bot.cards = cardService.giveRandomCards()
+        game.bot.cardsPlayed = ["1": [], "2": [], "3": []]
+        game.bot.passTurn = false
     }
 }

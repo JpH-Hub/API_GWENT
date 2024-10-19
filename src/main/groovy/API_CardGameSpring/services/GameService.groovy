@@ -2,10 +2,17 @@ package API_CardGameSpring.services
 
 import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Card
+import API_CardGameSpring.models.Character
+import API_CardGameSpring.models.Game
+import API_CardGameSpring.models.Input.GameInput
 import API_CardGameSpring.models.Input.PlayInput
 import API_CardGameSpring.models.Input.StartGameInput
 import API_CardGameSpring.models.Output.PlayGameOutput
+import API_CardGameSpring.models.Output.ResponseOutput
 import API_CardGameSpring.models.Output.StartGameOutput
+import API_CardGameSpring.models.Player
+import API_CardGameSpring.models.Status
+import org.apache.coyote.Response
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 
@@ -15,6 +22,7 @@ class GameService {
     private PlayerService playerService
     private Random random
     private Integer currentRound = 0
+    private List<Game> games = []
 
     GameService(BotService botService, PlayerService playerService, Random random) {
         this.botService = botService
@@ -22,21 +30,48 @@ class GameService {
         this.random = random
     }
 
-    Integer getCurrentRound(){
+    Integer getCurrentRound() {
         return currentRound
     }
-    StartGameOutput startGame(StartGameInput input) {
-        initializeGame(input)
-        BotAction botAction = new BotAction()
-        boolean faceOrCrownResult = random.nextBoolean()
-        if (input.faceOrCrown != faceOrCrownResult) {
-            botAction = botService.throwCard(currentRound)
-            StartGameOutput output = new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
-            return output
-        }
-        return new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
+
+    List<Game> getGames() {
+        return games
     }
 
+    ResponseOutput registerGame(GameInput input) {
+        Boolean faceOrCrownResult = null
+        for (Game game : games) {
+            if (game.id == input.id) {
+                throw new RuntimeException("id de game ja existente")
+            }
+        }
+        Player player = new Player()
+        player.name = input.playerName
+        Game newGame = new Game(input.id, player, new Character(), currentRound)
+        games.add(newGame)
+        return new ResponseOutput(message: "Game criado com sucesso.")
+    }
+
+
+    StartGameOutput startGame(StartGameInput input) {
+        for (Game game : games) {
+            if (game.id == input.id) {
+                if (game.status.equals(Status.NOT_INITIALIZED.getCode())) {
+                    initializeGame(game)
+                    BotAction botAction = new BotAction()
+                    boolean faceOrCrownResult = random.nextBoolean()
+                    if (input.faceOrCrown != faceOrCrownResult) {
+                        botAction = botService.throwCard(currentRound)
+                        return new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
+                    }
+                } else {
+                    throw new RuntimeException("Partida com esse id ja foi iniciada.")
+                }
+            } else {
+                throw new RuntimeException("Não existe uma partida registrada com esse id.")
+            }
+        }
+    }
 
 
     PlayGameOutput playTheGame(PlayInput input) {
@@ -79,10 +114,10 @@ class GameService {
     }
 
 
-    private void initializeGame(StartGameInput input) {
-        currentRound = 1
-        playerService.resetPlayerAttributes(input)
-        botService.resetBotAttributes()
+    private void initializeGame(Game game) {
+        game.currentRound = 1
+        playerService.resetPlayerAttributes(game)
+        botService.resetBotAttributes(game)
     }
 
     private void startANewRound() {

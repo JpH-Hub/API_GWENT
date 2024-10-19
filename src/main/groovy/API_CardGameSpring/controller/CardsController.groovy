@@ -1,6 +1,7 @@
 package API_CardGameSpring.controller
 
 import API_CardGameSpring.models.*
+import API_CardGameSpring.models.Input.GameInput
 import API_CardGameSpring.models.Input.PlayInput
 import API_CardGameSpring.models.Input.StartGameInput
 import API_CardGameSpring.models.Output.PlayGameOutput
@@ -37,7 +38,7 @@ class CardsController {
     private CardService cardService
     private GameService gameService
 
-    CardsController(BotService botService, PlayerService playerService, CardService cardService, GameService gameService) {
+    CardsController(CardService cardService, BotService botService, PlayerService playerService, GameService gameService) {
         this.botService = botService
         this.playerService = playerService
         this.cardService = cardService
@@ -60,6 +61,21 @@ class CardsController {
         return ResponseEntity.noContent().build()
     }
 
+    @PostMapping("/game")
+    ResponseEntity registerGame(@RequestBody GameInput input ) {
+        try{
+            ResponseOutput responseOutput = gameService.registerGame(input)
+            return ResponseEntity.status(HttpStatus.OK).body(responseOutput)
+        }
+        catch (RuntimeException e){
+            ResponseOutput responseOutput = new ResponseOutput(message: e.getMessage())
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseOutput)
+        }
+    }
+    @GetMapping("/games")
+    ResponseEntity getGames(){
+        return ResponseEntity.ok(gameService.games)
+    }
     @PostMapping("/start_game")
     ResponseEntity startGame(@RequestBody StartGameInput input) {
         StartGameOutput output = gameService.startGame(input)
