@@ -12,8 +12,6 @@ import API_CardGameSpring.models.Output.ResponseOutput
 import API_CardGameSpring.models.Output.StartGameOutput
 import API_CardGameSpring.models.Player
 import API_CardGameSpring.models.Status
-import org.apache.coyote.Response
-import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 
 @Service
@@ -58,88 +56,96 @@ class GameService {
             if (game.id == input.id) {
                 if (game.status.equals(Status.NOT_INITIALIZED.getCode())) {
                     initializeGame(game)
-                    BotAction botAction = new BotAction()
+                    BotAction botAction
                     boolean faceOrCrownResult = random.nextBoolean()
                     if (input.faceOrCrown != faceOrCrownResult) {
-                        botAction = botService.throwCard(currentRound)
+                        botAction = botService.throwCard(game)
                         return new StartGameOutput(faceOrCrownResult: faceOrCrownResult, botAction: botAction)
                     }
                 } else {
                     throw new RuntimeException("Partida com esse id ja foi iniciada.")
                 }
-            } else {
-                throw new RuntimeException("Não existe uma partida registrada com esse id.")
             }
         }
     }
 
 
     PlayGameOutput playTheGame(PlayInput input) {
-        BotAction botAction = new BotAction()
-        Card playedCard = null
-        String gameResult = ""
-        if (playerService.getLife() <= 0 || botService.getLife() <= 0) {
-            throw new RuntimeException("O jogo ja foi finalizado, inicie um novo jogo")
-        }
-        if (!playerService.shouldPassTurn(input)) {
-            if (playerService.checkCardIdIsValid(input)) {
-                playedCard = playerService.throwCard(input, currentRound)
-                gameResult = "${playerService.getName()}: jogou a carta ${playedCard.name} "
-                if (botService.shouldPassTurn(botAction)) {
-                    gameResult = "${gameResult}. Bot: passou a vez"
+        for (Game game : games) {
+            if (game.id == input.id) {
+                if (game.status == Status.STARTED.getCode()) {
+                    BotAction botAction = new BotAction()
+                    Card playedCard = null
+                    String gameResult = ""
+                    if (!playerService.shouldPassTurn(input, game)) {
+                        if (playerService.checkCardIdIsValid(input, game)) {
+                            playedCard = playerService.throwCard(input, game)
+                            gameResult = "${game.player.getName()}: jogou a carta ${playedCard.name} "
+                            if (botService.shouldPassTurn(botAction, game)) {
+                                gameResult = "${gameResult}. Bot: passou a vez"
+                            } else {
+                                botAction = botService.throwCard(game)
+                                gameResult = "${gameResult}. Bot: jogou a carta ${botAction.botCardPlayed.name}"
+                            }
+                        } else {
+                            throw new RuntimeException("A carta que tentaste jogar é inválida")
+                        }
+                    } else {
+                        if (botService.shouldPassTurn(botAction, game)) {
+                            gameResult = "${game.player.getName()}: passou a vez. Bot: passou a vez."
+                        } else {
+                            botAction = botService.handleBotTurn(botAction, game)
+                            gameResult = "${game.player.getName()}: passou a vez. Bot: jogou a carta ${botAction.botCardPlayed.name}"
+                        }
+                    }
+                    if (game.bot.getPassTurn() && playerService.shouldPassTurn(input, game) && game.currentRound <= 3) {
+                        startANewRound(game)
+                        botService.resetPassTurn(game)
+                    }
+                    gameResult = "${gameResult}. Round atual = ${game.currentRound}"
+                    if (game.player.getLife() <= 0 || game.bot.getLife() <= 0 || game.currentRound > 3) {
+                        gameResult = getWinner(game)
+                    }
+                    return new PlayGameOutput(botAction: botAction, playerCardPlayed: playedCard, gameResult: gameResult)
                 } else {
-                    botAction = botService.throwCard(currentRound)
-                    gameResult = "${gameResult}. Bot: jogou a carta ${botAction.botCardPlayed.name}"
+                    throw new RuntimeException("O jogo ja foi finalizado!")
                 }
-            } else {
-                throw new RuntimeException("A carta que tentaste jogar é inválida")
-            }
-        } else {
-            if (botService.shouldPassTurn(botAction)) {
-                gameResult = "${playerService.getName()}: passou a vez. Bot: passou a vez."
-            } else {
-                botAction = botService.handleBotTurn(currentRound, botAction)
-                gameResult = "${playerService.getName()}: passou a vez. Bot: jogou a carta ${botAction.botCardPlayed.name}"
             }
         }
-        if (botService.getPassTurn() && playerService.shouldPassTurn(input) && currentRound <= 3) {
-            startANewRound()
-            botService.resetPassTurn()
-        }
-        gameResult = "${gameResult}. Round atual = ${currentRound}"
-        if (playerService.life <= 0 || botService.life <= 0 || currentRound > 3) {
-            gameResult = getWinner()
-        }
-        return new PlayGameOutput(botAction: botAction, playerCardPlayed: playedCard, gameResult: gameResult)
+        throw new RuntimeException("Não tem game criado com esse id")
     }
 
 
     private void initializeGame(Game game) {
+        game.status = Status.STARTED.getCode()
         game.currentRound = 1
         playerService.resetPlayerAttributes(game)
         botService.resetBotAttributes(game)
     }
 
-    private void startANewRound() {
-        currentRound++
-        if (playerService.getAttackPoints() > botService.getAttackPoints()) {
-            botService.loseLife()
-        } else if (playerService.getAttackPoints() < botService.getAttackPoints()) {
-            playerService.loseLife()
+    private void startANewRound(Game game) {
+        game.currentRound++
+        if (game.player.getAttackPoints() > game.bot.getAttackPoints()) {
+            botService.loseLife(game)
+        } else if (game.player.getAttackPoints() < game.bot.getAttackPoints()) {
+            playerService.loseLife(game)
         } else {
-            botService.loseLife()
-            playerService.loseLife()
+            botService.loseLife(game)
+            playerService.loseLife(game)
         }
-        playerService.resetAttackPoints()
-        botService.resetAttackPoints()
+        playerService.resetAttackPoints(game)
+        botService.resetAttackPoints(game)
     }
 
-    private String getWinner() {
-        if (playerService.getLife() <= 0 && botService.getLife() <= 0) {
+    private String getWinner(Game game) {
+        if (game.player.getLife() <= 0 && game.bot.getLife() <= 0) {
+            game.status = Status.FINALIZED.getCode()
             return "Empatou o Jogo!"
-        } else if (botService.getLife() <= 0) {
-            return playerService.getName() + " ganhou o Jogo!"
+        } else if (game.bot.getLife() <= 0) {
+            game.status = Status.FINALIZED.getCode()
+            return game.player.getName() + " ganhou o Jogo!"
         } else {
+            game.status = Status.FINALIZED.getCode()
             return "Bot ganhou o Jogo!"
         }
     }

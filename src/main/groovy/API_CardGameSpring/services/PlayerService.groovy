@@ -3,7 +3,7 @@ import API_CardGameSpring.models.Card
 import API_CardGameSpring.models.Game
 import API_CardGameSpring.models.Input.PlayInput
 import API_CardGameSpring.models.Player
-import API_CardGameSpring.models.Input.StartGameInput
+import API_CardGameSpring.models.Status
 import org.springframework.stereotype.Service
 
 @Service
@@ -17,8 +17,17 @@ class PlayerService {
         this.cardService = cardService
     }
 
-    List<Card> getCards() {
-        return player.cards
+    List<Card> getCards(Integer idMatch, List<Game> games) {
+        for (Game game: games) {
+            if (game.id == idMatch) {
+                if (game.status == Status.STARTED.getCode()) {
+                    return game.player.cards
+                } else {
+                    throw new RuntimeException("Partida não Iniciada!")
+                }
+            }
+        }
+        throw new RuntimeException("Id de partida Inválida!")
     }
 
     String getName() {
@@ -29,32 +38,32 @@ class PlayerService {
         return player.life
     }
 
-    void resetAttackPoints(){
-        player.attackPoints = 0
+    void resetAttackPoints(Game game){
+        game.player.attackPoints = 0
     }
 
-    void loseLife(){
-        player.life = player.life - 1
+    void loseLife(Game game){
+        game.player.life = game.player.life - 1
     }
 
-    Card throwCard(PlayInput input, Integer currentRound) {
-        Card playerCardPlayed = player.cards[input.index]
-        player.cards.remove(input.index)
-        player.cardsPlayed[currentRound.toString()] = player.cardsPlayed[currentRound.toString()] + playerCardPlayed
-        player.attackPoints = player.attackPoints + playerCardPlayed.attack
+    Card throwCard(PlayInput input, Game game) {
+        Card playerCardPlayed = game.player.cards[input.index]
+        game.player.cards.remove(input.index)
+        game.player.cardsPlayed[game.currentRound.toString()] = game.player.cardsPlayed[game.currentRound.toString()] + playerCardPlayed
+        game.player.attackPoints = game.player.attackPoints + playerCardPlayed.attack
         return playerCardPlayed
     }
 
-    boolean checkCardIdIsValid(PlayInput input) {
-        input.index = player.cards.findIndexOf { it.id == input.cardId }
+    boolean checkCardIdIsValid(PlayInput input, Game game) {
+        input.index = game.player.cards.findIndexOf { it.id == input.cardId }
         if (input.index < 0) {
             return false
         }
         return true
     }
 
-    boolean shouldPassTurn(PlayInput input) {
-        if (player.cards.isEmpty() || input.passTurn) {
+    boolean shouldPassTurn(PlayInput input, Game game) {
+        if (game.player.cards.isEmpty() || input.passTurn) {
             return true
         }
         return false

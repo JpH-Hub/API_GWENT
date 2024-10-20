@@ -31,20 +31,20 @@ class BotService {
         return bot.attackPoints
     }
 
-    void resetAttackPoints() {
-        bot.attackPoints = 0
+    void resetAttackPoints(Game game) {
+        game.bot.attackPoints = 0
     }
 
-    void loseLife() {
-        bot.life = bot.life - 1
+    void loseLife(Game game) {
+        game.bot.life = game.bot.life - 1
     }
 
     Character getBot() {
         return bot
     }
 
-    Boolean resetPassTurn() {
-        bot.passTurn = false
+    Boolean resetPassTurn(Game game) {
+        game.bot.passTurn = false
     }
 
     Boolean getPassTurn() {
@@ -52,36 +52,36 @@ class BotService {
     }
 
 
-    BotAction throwCard(Integer currentRound) {
-        int index = random.nextInt(bot.cards.size())
-        Card botCardPlayed = bot.cards.get(index)
-        bot.cards.remove(index)
-        bot.cardsPlayed[currentRound.toString()] = bot.cardsPlayed[currentRound.toString()] + botCardPlayed
-        bot.attackPoints = bot.attackPoints + botCardPlayed.attack
+    BotAction throwCard(Game game) {
+        int index = random.nextInt(game.bot.cards.size())
+        Card botCardPlayed = game.bot.cards.get(index)
+        game.bot.cards.remove(index)
+        game.bot.cardsPlayed[game.currentRound.toString()] = game.bot.cardsPlayed[game.currentRound.toString()] + botCardPlayed
+        game.bot.attackPoints = game.bot.attackPoints + botCardPlayed.attack
         return new BotAction(botCardPlayed: botCardPlayed)
     }
 
-    BotAction handleBotTurn(Integer currentRound, BotAction botAction) {
-        botAction = throwCard(currentRound)
-        bot.passTurn = true
+    BotAction handleBotTurn(BotAction botAction, Game game) {
+        botAction = throwCard(game)
+        game.bot.passTurn = true
         return botAction
     }
 
-    boolean shouldPassTurn(BotAction botAction) {
-        if (bot.passTurn) {
+    boolean shouldPassTurn(BotAction botAction, Game game) {
+        if (game.bot.passTurn) {
             return true
         }
-        if (bot.cards.isEmpty()) {
-            bot.passTurn = true
-            botAction.passTurn = bot.passTurn
+        if (game.bot.cards.isEmpty()) {
+            game.bot.passTurn = true
+            botAction.passTurn = game.bot.passTurn
             return botAction.passTurn
-        } else if (bot.life == 1) {
-            bot.passTurn = false
-            botAction.passTurn = bot.passTurn
+        } else if (game.bot.life == 1) {
+            game.bot.passTurn = false
+            botAction.passTurn = game.bot.passTurn
             return botAction.passTurn
         }
-        bot.passTurn = random.nextBoolean()
-        botAction.passTurn = bot.passTurn
+        game.bot.passTurn = random.nextBoolean()
+        botAction.passTurn = game.bot.passTurn
         return botAction.passTurn
     }
 

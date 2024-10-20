@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*
 //TODO REALIZAR ISSO PRIMEIRO: Criar uma service, chamada GameService e com isso reduzir a logica da controller.(CONCLUIDO)
 
 
-//TODO fazer com que o gwent possa suportar mais de uma partida.
+//TODO fazer com que o gwent possa suportar mais de uma partida. (Concluida :))
 
 
 //TODO fazer alguma forma com que podemos jogar player contra player.
@@ -78,17 +78,30 @@ class CardsController {
     }
     @PostMapping("/start_game")
     ResponseEntity startGame(@RequestBody StartGameInput input) {
-        StartGameOutput output = gameService.startGame(input)
-        return ResponseEntity.ok(output)
+        try {
+            StartGameOutput output = gameService.startGame(input)
+            return ResponseEntity.ok(output)
+        } catch (RuntimeException e) {
+            ResponseOutput responseOutput = new ResponseOutput(message: e.getMessage())
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseOutput)
+        }
+
     }
 
-    @GetMapping("/player_cards")
-    ResponseEntity getPlayerCards() {
-        return ResponseEntity.ok(playerService.getCards())
+    @GetMapping("/player_cards/{id}")
+    ResponseEntity getPlayerCards(@PathVariable("id") Integer idMatch) {
+        try {
+            return ResponseEntity.status(HttpStatus.OK).body(playerService.getCards(idMatch, gameService.games))
+        } catch (RuntimeException e) {
+            ResponseOutput responseOutput = new ResponseOutput(message: e.getMessage())
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseOutput)
+        }
+
     }
 
     @GetMapping("/bot_cards")
     ResponseEntity getBotCards() {
+        //Todo - para o joão fazer, seguir a mesma logica que o getPlayerCards!
         return ResponseEntity.ok(botService.getCards())
     }
 
@@ -103,7 +116,6 @@ class CardsController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(output)
         }
     }
-
 
     @GetMapping("/status")
     ResponseEntity getStatus() {
