@@ -1,12 +1,15 @@
 package API_CardGameSpring.controller
-
 import API_CardGameSpring.models.*
 import API_CardGameSpring.models.Input.GameInput
 import API_CardGameSpring.models.Input.PlayInput
+import API_CardGameSpring.models.Input.PlayPVPInput
 import API_CardGameSpring.models.Input.StartGameInput
+import API_CardGameSpring.models.Input.StartGamePVPInput
 import API_CardGameSpring.models.Output.PlayGameOutput
+import API_CardGameSpring.models.Output.PlayGamePVPOutput
 import API_CardGameSpring.models.Output.ResponseOutput
 import API_CardGameSpring.models.Output.StartGameOutput
+import API_CardGameSpring.models.Output.StartGamePVPOutput
 import API_CardGameSpring.models.Output.StatusGameOutput
 import API_CardGameSpring.services.BotService
 import API_CardGameSpring.services.CardService
@@ -45,7 +48,6 @@ class CardsController {
         this.gameService = gameService
     }
 
-
     @GetMapping
     ResponseEntity getCards() {
         return ResponseEntity.ok(cardService.cards.values().toList())
@@ -72,14 +74,27 @@ class CardsController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseOutput)
         }
     }
+
     @GetMapping("/games")
     ResponseEntity getGames(){
         return ResponseEntity.ok(gameService.games)
     }
-    @PostMapping("/start_game")
-    ResponseEntity startGame(@RequestBody StartGameInput input) {
+
+    @PostMapping("/start_game/PVB")
+    ResponseEntity startGamePVB(@RequestBody StartGameInput input) {
         try {
-            StartGameOutput output = gameService.startGame(input)
+            StartGameOutput output = gameService.startGamePVB(input)
+            return ResponseEntity.ok(output)
+        } catch (RuntimeException e) {
+            ResponseOutput responseOutput = new ResponseOutput(message: e.getMessage())
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseOutput)
+        }
+    }
+
+    @PostMapping("/start_game/PVP")
+    ResponseEntity startGamePVP(@RequestBody StartGamePVPInput input) {
+        try {
+            StartGamePVPOutput output = gameService.startGamePVP(input)
             return ResponseEntity.ok(output)
         } catch (RuntimeException e) {
             ResponseOutput responseOutput = new ResponseOutput(message: e.getMessage())
@@ -110,10 +125,21 @@ class CardsController {
 
     }
 
-    @PostMapping("/play")
-    ResponseEntity play(@RequestBody PlayInput input) {
+    @PostMapping("/play/PVB")
+    ResponseEntity playPvB(@RequestBody PlayInput input) {
         try {
             PlayGameOutput output = gameService.playTheGame(input)
+            return ResponseEntity.status(HttpStatus.OK).body(output)
+        }
+        catch (RuntimeException e) {
+            ResponseOutput output = new ResponseOutput(message: e.getMessage())
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(output)
+        }
+    }
+    @PostMapping("/play/PVP")
+    ResponseEntity playPvP(@RequestBody PlayPVPInput input) {
+        try {
+            PlayGamePVPOutput output = gameService.playTheGamePVP(input)
             return ResponseEntity.status(HttpStatus.OK).body(output)
         }
         catch (RuntimeException e) {
