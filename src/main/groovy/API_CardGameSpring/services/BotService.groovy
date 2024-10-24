@@ -4,6 +4,7 @@ import API_CardGameSpring.models.BotAction
 import API_CardGameSpring.models.Card
 import API_CardGameSpring.models.Character
 import API_CardGameSpring.models.Game
+import API_CardGameSpring.models.Status
 import org.springframework.stereotype.Service
 
 @Service
@@ -19,8 +20,17 @@ class BotService {
         this.cardService = cardService
     }
 
-    List<Card> getCards() {
-        return bot.cards
+    List<Card> getCards(Integer idMatch, List<Game> games) {
+        for (Game game: games) {
+            if (game.id == idMatch) {
+                if (game.status == Status.STARTED.getCode()) {
+                    return game.bot.cards
+                } else {
+                    throw new RuntimeException("Partida não Iniciada!")
+                }
+            }
+        }
+        throw new RuntimeException("Id de partida Inválida!")
     }
 
     Integer getLife() {

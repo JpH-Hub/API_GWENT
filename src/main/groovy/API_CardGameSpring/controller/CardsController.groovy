@@ -99,10 +99,15 @@ class CardsController {
 
     }
 
-    @GetMapping("/bot_cards")
-    ResponseEntity getBotCards() {
-        //Todo - para o joão fazer, seguir a mesma logica que o getPlayerCards!
-        return ResponseEntity.ok(botService.getCards())
+    @GetMapping("/bot_cards/{id}")
+    ResponseEntity getBotCards(@PathVariable("id") Integer idMatch) {
+        try {
+            return ResponseEntity.status(HttpStatus.OK).body(botService.getCards(idMatch, gameService.games))
+        } catch (RuntimeException e) {
+            ResponseOutput responseOutput = new ResponseOutput(message: e.getMessage())
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(responseOutput)
+        }
+
     }
 
     @PostMapping("/play")
